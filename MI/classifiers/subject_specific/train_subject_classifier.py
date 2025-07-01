@@ -23,7 +23,6 @@ warnings.filterwarnings('ignore', message='y residual is constant')
 
 # Add parent directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-from data_processing import load_data, preprocess, epoch_extraction
 
 # Add path for model architectures
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../models'))
@@ -45,10 +44,26 @@ def load_subject_data(participant_id, data_dir='MI/processed_data'):
     epochs = data['epochs']
     labels = data['labels']
     
+    print(f"  Raw epochs shape: {epochs.shape if hasattr(epochs, 'shape') else 'unknown'}")
+    print(f"  Raw labels shape: {labels.shape if hasattr(labels, 'shape') else 'unknown'}")
+    print(f"  Unique labels: {np.unique(labels)}")
+    
     # Binary classification only (remove rest class)
     mask = labels != 3
+    print(f"  Mask sum (non-rest trials): {np.sum(mask)}")
+    
+    # Ensure numpy arrays
+    epochs = np.array(epochs)
+    labels = np.array(labels)
+    
     epochs = epochs[mask]
     labels = labels[mask]
+    
+    print(f"  After filtering - epochs shape: {epochs.shape}")
+    print(f"  After filtering - labels shape: {labels.shape}")
+    
+    if len(labels) == 0:
+        raise ValueError("No trials left after filtering! Check if data contains only rest class.")
     
     # Convert to binary: Left=0, Right=1
     labels = (labels == 2).astype(int)
@@ -63,11 +78,19 @@ def extract_personalized_features(X_epochs, y_labels, n_components=4):
     """Extract features optimized for individual"""
     
     print("\nExtracting personalized CSP features...")
+    print(f"  Input shape: {X_epochs.shape}")
     
     # CSP expects (n_epochs, n_channels, n_times)
     # Ensure double precision to avoid sklearn warnings
     X_epochs = X_epochs.astype(np.float64)
-    X_csp_format = np.transpose(X_epochs, (0, 2, 1))
+    
+    # Check if we need to transpose
+    if len(X_epochs.shape) == 3:
+        X_csp_format = np.transpose(X_epochs, (0, 2, 1))
+        print(f"  Transposed to: {X_csp_format.shape}")
+    else:
+        print(f"  ERROR: Expected 3D array but got shape: {X_epochs.shape}")
+        raise ValueError(f"Expected 3D array but got shape: {X_epochs.shape}")
     
     # Use fewer components for subject-specific (less overfitting)
     # Small regularization helps with limited training data
@@ -221,7 +244,7 @@ def train_subject_specific_models(X_train, X_test, y_train, y_test, X_train_epoc
     
     return best_model, best_name, results, architectures
 
-def save_subject_model(participant_id, model, csp, scaler, results, architectures=None, best_name=None, save_dir='MI/models/trained_models'):
+def save_subject_model(participant_id, model, csp, scaler, results, architectures=None, best_name=None, save_dir='models/trained_models'):
     """Save subject-specific model with metadata"""
     
     # Create filename with participant ID
@@ -270,7 +293,7 @@ def save_subject_model(participant_id, model, csp, scaler, results, architecture
     
     return filename
 
-def discover_participants(data_dir='MI/processed_data'):
+def discover_participants(data_dir='processed_data'):
     """Automatically discover all participants from data files"""
     participants = []
     
@@ -282,7 +305,7 @@ def discover_participants(data_dir='MI/processed_data'):
     
     return sorted(participants)
 
-def train_all_participants(data_dir='MI/processed_data'):
+def train_all_participants(data_dir='processed_data'):
     """Train subject-specific models for all discovered participants"""
     participants = discover_participants(data_dir)
     
@@ -314,11 +337,10 @@ def train_all_participants(data_dir='MI/processed_data'):
             X_train_scaled = scaler.fit_transform(X_train)
             X_test_scaled = scaler.transform(X_test)
             
-            # Split epochs for new architectures
-            indices = np.arange(len(X))
-            train_idx, test_idx = train_test_split(indices, test_size=0.2, random_state=42, stratify=y)
-            X_train_epochs = X[train_idx]
-            X_test_epochs = X[test_idx]
+            # For architectures that need raw epochs, pass None
+            # (The extract_personalized_features already splits the data)
+            X_train_epochs = None
+            X_test_epochs = None
             
             # Train models
             best_model, model_name, results, architectures = train_subject_specific_models(
@@ -355,7 +377,7 @@ def train_all_participants(data_dir='MI/processed_data'):
     
     print("\n" + "="*60)
     print("✓ Training complete for all participants!")
-    print("\nModels saved in: MI/models/subject_<ID>_current.pkl")
+    print("\nModels saved in: models/trained_models/subject_<ID>_current.pkl")
     
     return all_results
 
@@ -365,7 +387,7 @@ def main():
                        help='Specific participant ID (optional, trains all if not specified)')
     parser.add_argument('--n_components', type=int, default=4, 
                        help='Number of CSP components (default: 4)')
-    parser.add_argument('--data_dir', type=str, default='MI/processed_data',
+    parser.add_argument('--data_dir', type=str, default='processed_data',
                        help='Directory with processed data')
     args = parser.parse_args()
     
@@ -385,11 +407,10 @@ def main():
             X_train_scaled = scaler.fit_transform(X_train)
             X_test_scaled = scaler.transform(X_test)
             
-            # Split epochs for new architectures
-            indices = np.arange(len(X))
-            train_idx, test_idx = train_test_split(indices, test_size=0.2, random_state=42, stratify=y)
-            X_train_epochs = X[train_idx]
-            X_test_epochs = X[test_idx]
+            # For architectures that need raw epochs, pass None
+            # (The extract_personalized_features already splits the data)
+            X_train_epochs = None
+            X_test_epochs = None
             
             # Train models
             best_model, model_name, results, architectures = train_subject_specific_models(
@@ -408,6 +429,9 @@ def main():
             
         except Exception as e:
             print(f"\n Error: {e}")
+            import traceback
+            print("\nFull traceback:")
+            traceback.print_exc()
     else:
         # Train all participants
         train_all_participants(args.data_dir)
