@@ -14,3 +14,6 @@ Key Files Summary:
   - numpy, scipy - For signal processing
   - scikit-learn - For classification
   - Trained MI model in MI/models/
+
+  To train the model run:
+  - python MI/process_new_participant.py (participant number)
