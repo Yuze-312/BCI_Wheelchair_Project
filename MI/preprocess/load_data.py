@@ -34,7 +34,7 @@ class MIDataLoader:
         Returns:
             Dictionary mapping filenames to DataFrames
         """
-        session_path = self.base_path / "EEG data" / participant / session
+        session_path = self.base_path / participant / session
         
         if not session_path.exists():
             raise ValueError(f"Session path not found: {session_path}")
@@ -109,7 +109,7 @@ class MIDataLoader:
         }
         
         # Load info file if exists
-        info_path = self.base_path / "EEG data" / participant / "Info.txt"
+        info_path = self.base_path / participant / "Info.txt"
         if info_path.exists():
             with open(info_path, 'r') as f:
                 participant_data['info']['task'] = f.read().strip()
