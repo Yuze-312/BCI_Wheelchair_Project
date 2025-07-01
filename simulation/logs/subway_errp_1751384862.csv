@@ -1,0 +1,7 @@
+timestamp,event_type,trial_id,cue_class,predicted_class,accuracy,error_type,confidence,reaction_time,coins_collected,artifact_flag,details
+0.00037949997931718826,session_start,,,,,,,,,,"difficulty=easy, trials=5, mi_mode=False"
+0.0005818749777972698,trial_start,1,,,,,,,,,difficulty=easy
+0.0006252080202102661,practice_trial,1,,,,,,,,,trial=1
+0.0007596253417432308,coin_spawned,1,,,,,,,0,,"coin_lane=1, agent_pos=0"
+2.895951082929969,coin_missed,1,,,,,,,0,,"coin_lane=1, agent_pos=0"
+3.8903675829060376,coin_spawned,1,,,,,,,0,,"coin_lane=-1, agent_pos=0"

@@ -1,0 +1,7 @@
+timestamp,event_type,trial_id,cue_class,predicted_class,accuracy,error_type,confidence,reaction_time,coins_collected,artifact_flag,details
+0.000,session_start,,,,,,,,,,session_id=2025-06-28T16:44:46.598865
+1.362,coin_spawned,0,,,,,,,,,relative_pos=-1
+1.525,cue_left,0,left,,,,,,,,agent_pos=0
+6.540,imagery_end,0,,,,,0.0,,,,timeout
+6.540,cue_timeout,0,left,,,,,,,,no_action
+8.240,coin_missed,0,,,,,,,,,relative_pos=-1

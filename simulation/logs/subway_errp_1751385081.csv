@@ -1,0 +1,11 @@
+timestamp,event_type,trial_id,cue_class,predicted_class,accuracy,error_type,confidence,reaction_time,coins_collected,artifact_flag,details
+0.0003566248342394829,session_start,,,,,,,,,,"difficulty=easy, trials=5, mi_mode=False"
+0.0005730828270316124,trial_start,1,,,,,,,,,difficulty=easy
+0.0006093750707805157,practice_trial,1,,,,,,,,,trial=1
+0.0011715828441083431,coin_spawned,1,,,,,,,0,,"coin_lane=1, agent_pos=0"
+0.9929871247150004,cue_right,1,right,,,,,,0,,agent_pos=0
+1.8210366247221828,feedback_correct,1,,right,True,,,828,0,,"intended=MOVE_RIGHT, executed=MOVE_RIGHT, movement_required=RIGHT"
+2.177812166046351,coin_collected,1,,,,,,,1,,"coin_lane=1, agent_pos=1"
+2.6680804160423577,coin_spawned,1,,,,,,,1,,"coin_lane=2, agent_pos=1"
+3.0172588326968253,cue_right,1,right,,,,,,1,,agent_pos=1
+8.018233499955386,cue_right,1,right,,,,,,1,,agent_pos=1

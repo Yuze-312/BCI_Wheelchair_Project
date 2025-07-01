@@ -1,0 +1,230 @@
+timestamp,event_type,trial_id,cue_class,predicted_class,accuracy,error_type,confidence,reaction_time,coins_collected,artifact_flag,details
+0.0003164582885801792,session_start,,,,,,,,,,"difficulty=easy, trials=5, mi_mode=False"
+0.0005552503280341625,trial_start,1,,,,,,,,,difficulty=easy
+0.0005922503769397736,practice_trial,1,,,,,,,,,trial=1
+0.0011602910235524178,coin_spawned,1,,,,,,,0,,"coin_lane=1, agent_pos=0"
+0.350749125238508,cue_right,1,right,,,,,,0,,agent_pos=0
+4.4312232080847025,feedback_correct,1,,left,True,,,4080,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+6.1189325409941375,coin_missed,1,,,,,,,0,,"coin_lane=1, agent_pos=-1"
+7.111862500198185,coin_spawned,1,,,,,,,0,,"coin_lane=-2, agent_pos=-1"
+7.465889833401889,cue_left,1,left,,,,,,0,,agent_pos=-1
+12.448353875428438,feedback_correct,1,,left,True,,,4982,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+12.649666916113347,coin_collected,1,,,,,,,1,,"coin_lane=-2, agent_pos=-2"
+13.137525541242212,coin_spawned,1,,,,,,,1,,"coin_lane=-3, agent_pos=-2"
+13.488994750194252,cue_left,1,left,,,,,,1,,agent_pos=-2
+18.465980125125498,feedback_correct,1,,left,True,,,4976,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+18.66531708324328,coin_collected,1,,,,,,,2,,"coin_lane=-3, agent_pos=-3"
+19.154023375362158,coin_spawned,1,,,,,,,2,,"coin_lane=-2, agent_pos=-3"
+19.50698629114777,cue_right,1,right,,,,,,2,,agent_pos=-3
+24.48487695818767,feedback_correct,1,,left,True,,,4977,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+25.999796207994223,coin_missed,1,,,,,,,2,,"coin_lane=-2, agent_pos=-4"
+26.991437250282615,coin_spawned,1,,,,,,,2,,"coin_lane=-5, agent_pos=-4"
+27.34317929111421,cue_left,1,left,,,,,,2,,agent_pos=-4
+30.482039333321154,feedback_correct,1,,left,True,,,3138,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+31.019546875264496,coin_collected,1,,,,,,,3,,"coin_lane=-5, agent_pos=-5"
+31.02348345844075,trial_end,1,,,,,,,3,,
+33.54766395827755,trial_start,2,,,,,,,,,difficulty=easy
+33.54797229124233,practice_trial,2,,,,,,,,,trial=2
+33.54848083341494,coin_spawned,2,,,,,,,0,,"coin_lane=1, agent_pos=0"
+33.90304287523031,cue_right,2,right,,,,,,0,,agent_pos=0
+38.50731433322653,feedback_correct,2,,left,True,,,4604,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+40.08262095833197,coin_missed,2,,,,,,,0,,"coin_lane=1, agent_pos=-1"
+41.06963787507266,coin_spawned,2,,,,,,,0,,"coin_lane=0, agent_pos=-1"
+41.42566237505525,cue_right,2,right,,,,,,0,,agent_pos=-1
+44.52794612525031,feedback_error,2,,right,False,primary,,3102,0,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=RIGHT"
+44.829346125014126,primary_errp,2,,,,primary,,,0,,
+45.06551008345559,coin_collected,2,,,,,,,1,,"coin_lane=0, agent_pos=0"
+45.5544603751041,coin_spawned,2,,,,,,,1,,"coin_lane=1, agent_pos=0"
+45.908023125026375,cue_right,2,right,,,,,,1,,agent_pos=0
+50.55637550028041,feedback_correct,2,,left,True,,,4648,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+52.11777783324942,coin_missed,2,,,,,,,1,,"coin_lane=1, agent_pos=-1"
+53.10856758337468,coin_spawned,2,,,,,,,1,,"coin_lane=-2, agent_pos=-1"
+53.46308479132131,cue_left,2,left,,,,,,1,,agent_pos=-1
+56.5791418752633,feedback_correct,2,,left,True,,,3116,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+57.1149830003269,coin_collected,2,,,,,,,2,,"coin_lane=-2, agent_pos=-2"
+57.597992583177984,coin_spawned,2,,,,,,,2,,"coin_lane=-1, agent_pos=-2"
+57.94742037542164,cue_right,2,right,,,,,,2,,agent_pos=-2
+62.58950345823541,feedback_correct,2,,left,True,,,4642,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+64.17041600029916,coin_missed,2,,,,,,,2,,"coin_lane=-1, agent_pos=-3"
+65.1581003330648,coin_spawned,2,,,,,,,2,,"coin_lane=-2, agent_pos=-3"
+65.51055954117328,cue_right,2,right,,,,,,2,,agent_pos=-3
+68.61077420832589,feedback_error,2,,right,False,primary,,3100,2,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=RIGHT"
+68.91526758344844,primary_errp,2,,,,primary,,,2,,
+69.14788720803335,coin_collected,2,,,,,,,3,,"coin_lane=-2, agent_pos=-2"
+69.1518097082153,trial_end,2,,,,,,,3,,
+71.66618370823562,trial_start,3,,,,,,,,,difficulty=easy
+71.66651108302176,practice_trial,3,,,,,,,,,trial=3
+71.66724404133856,coin_spawned,3,,,,,,,0,,"coin_lane=1, agent_pos=0"
+72.01778645813465,cue_right,3,right,,,,,,0,,agent_pos=0
+76.62640633340925,feedback_correct,3,,left,True,,,4608,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+78.19989891629666,coin_missed,3,,,,,,,0,,"coin_lane=1, agent_pos=-1"
+79.19379637530074,coin_spawned,3,,,,,,,0,,"coin_lane=-2, agent_pos=-1"
+79.54530245810747,cue_left,3,left,,,,,,0,,agent_pos=-1
+82.65330466628075,feedback_correct,3,,left,True,,,3108,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+83.18908804142848,coin_collected,3,,,,,,,1,,"coin_lane=-2, agent_pos=-2"
+83.67245062533766,coin_spawned,3,,,,,,,1,,"coin_lane=-3, agent_pos=-2"
+84.02655387530103,cue_left,3,left,,,,,,1,,agent_pos=-2
+88.67204241640866,feedback_correct,3,,left,True,,,4645,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+88.90277654118836,coin_collected,3,,,,,,,2,,"coin_lane=-3, agent_pos=-3"
+89.38668795814738,coin_spawned,3,,,,,,,2,,"coin_lane=-2, agent_pos=-3"
+89.73543737502769,cue_right,3,right,,,,,,2,,agent_pos=-3
+94.69978925026953,feedback_correct,3,,left,True,,,4964,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+96.21210737526417,coin_missed,3,,,,,,,2,,"coin_lane=-2, agent_pos=-4"
+97.20548791624606,coin_spawned,3,,,,,,,2,,"coin_lane=-5, agent_pos=-4"
+97.56195729132742,cue_left,3,left,,,,,,2,,agent_pos=-4
+100.7128175413236,feedback_correct,3,,left,True,,,3150,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+101.23436000011861,coin_collected,3,,,,,,,3,,"coin_lane=-5, agent_pos=-5"
+101.23821958340704,trial_end,3,,,,,,,3,,
+105.43714195815846,main_trials_start,3,,,,,,,,,practice_complete=3
+105.43758308328688,trial_start,4,,,,,,,,,difficulty=easy
+105.43796700006351,coin_spawned,4,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+105.77865791600198,cue_left,4,left,,,,,,0,,agent_pos=0
+110.74799316609278,feedback_correct,4,,left,True,,,4969,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+110.94991145841777,coin_collected,4,,,,,,,1,,"coin_lane=-1, agent_pos=-1"
+111.43927150033414,coin_spawned,4,,,,,,,1,,"coin_lane=-2, agent_pos=-1"
+111.78878408344463,cue_left,4,left,,,,,,1,,agent_pos=-1
+116.7589673330076,feedback_error,4,,right,False,primary,,4970,1,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=LEFT"
+117.06647762516513,primary_errp,4,,,,primary,,,1,,
+118.27051037503406,coin_missed,4,,,,,,,1,,"coin_lane=-2, agent_pos=0"
+119.25886758323759,coin_spawned,4,,,,,,,1,,"coin_lane=1, agent_pos=0"
+119.61153975035995,cue_right,4,right,,,,,,1,,agent_pos=0
+122.7835938334465,feedback_correct,4,,left,True,,,3172,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+124.6420503333211,coin_missed,4,,,,,,,1,,"coin_lane=1, agent_pos=-1"
+125.63158325012773,coin_spawned,4,,,,,,,1,,"coin_lane=0, agent_pos=-1"
+125.98267795844004,cue_right,4,right,,,,,,1,,agent_pos=-1
+130.7926144162193,feedback_correct,4,,left,True,,,4809,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+132.3385577914305,coin_missed,4,,,,,,,1,,"coin_lane=0, agent_pos=-2"
+133.3254840001464,coin_spawned,4,,,,,,,1,,"coin_lane=-1, agent_pos=-2"
+133.68027333309874,cue_right,4,right,,,,,,1,,agent_pos=-2
+136.82097983313724,feedback_correct,4,,left,True,,,3140,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+138.7002570000477,coin_missed,4,,,,,,,1,,"coin_lane=-1, agent_pos=-3"
+139.6874767499976,coin_spawned,4,,,,,,,1,,"coin_lane=-2, agent_pos=-3"
+140.03911879099905,cue_right,4,right,,,,,,1,,agent_pos=-3
+144.83794425008819,feedback_error,4,,right,False,primary,,4798,1,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=RIGHT"
+145.03994975006208,coin_collected,4,,,,,,,2,,"coin_lane=-2, agent_pos=-2"
+145.14562720805407,primary_errp,4,,,,primary,,,1,,
+145.529432291165,coin_spawned,4,,,,,,,2,,"coin_lane=-3, agent_pos=-2"
+145.88438779115677,cue_left,4,left,,,,,,2,,agent_pos=-2
+150.8641305002384,feedback_correct,4,,left,True,,,4979,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+151.0654175002128,coin_collected,4,,,,,,,3,,"coin_lane=-3, agent_pos=-3"
+151.06938287522644,trial_end,4,,,,,,,3,,
+153.582693208009,trial_start,5,,,,,,,,,difficulty=easy
+153.58335641631857,coin_spawned,5,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+153.93475200003013,cue_left,5,left,,,,,,0,,agent_pos=0
+158.87497345823795,feedback_error,5,,right,False,primary,,4940,0,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=LEFT"
+159.17727170838043,primary_errp,5,,,,primary,,,0,,
+160.37971691600978,coin_missed,5,,,,,,,0,,"coin_lane=-1, agent_pos=1"
+161.37210683338344,coin_spawned,5,,,,,,,0,,"coin_lane=0, agent_pos=1"
+161.725284000393,cue_left,5,left,,,,,,0,,agent_pos=1
+164.87504729116336,feedback_correct,5,,left,True,,,3149,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+165.41019062511623,coin_collected,5,,,,,,,1,,"coin_lane=0, agent_pos=0"
+165.8992565833032,coin_spawned,5,,,,,,,1,,"coin_lane=1, agent_pos=0"
+166.25150633323938,cue_right,5,right,,,,,,1,,agent_pos=0
+170.89560895832255,feedback_error,5,,right,False,primary,,4644,1,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=RIGHT"
+171.1300246254541,coin_collected,5,,,,,,,2,,"coin_lane=1, agent_pos=1"
+171.2004259582609,primary_errp,5,,,,primary,,,1,,
+171.61753079108894,coin_spawned,5,,,,,,,2,,"coin_lane=2, agent_pos=1"
+171.97192845819518,cue_right,5,right,,,,,,2,,agent_pos=1
+176.90805075038224,feedback_correct,5,,left,True,,,4936,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+178.41906870808452,coin_missed,5,,,,,,,2,,"coin_lane=2, agent_pos=0"
+179.40726437512785,coin_spawned,5,,,,,,,2,,"coin_lane=1, agent_pos=0"
+179.76033216621727,cue_right,5,right,,,,,,2,,agent_pos=0
+182.91678783344105,feedback_correct,5,,left,True,,,3156,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+184.78688800008968,coin_missed,5,,,,,,,2,,"coin_lane=1, agent_pos=-1"
+185.77233716612682,coin_spawned,5,,,,,,,2,,"coin_lane=0, agent_pos=-1"
+186.12772841611877,cue_right,5,right,,,,,,2,,agent_pos=-1
+190.9503754582256,feedback_error,5,,right,False,primary,,4822,2,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=RIGHT"
+191.15033850027248,coin_collected,5,,,,,,,3,,"coin_lane=0, agent_pos=0"
+191.15432408312336,trial_end,5,,,,,,,3,,
+191.25208300026134,primary_errp,5,,,,primary,,,2,,
+193.66801041644067,trial_start,6,,,,,,,,,difficulty=easy
+193.6687918752432,coin_spawned,6,,,,,,,0,,"coin_lane=1, agent_pos=0"
+194.0176196251996,cue_right,6,right,,,,,,0,,agent_pos=0
+198.9572292501107,feedback_correct,6,,left,True,,,4939,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+200.47027241624892,coin_missed,6,,,,,,,0,,"coin_lane=1, agent_pos=-1"
+201.45536533324048,coin_spawned,6,,,,,,,0,,"coin_lane=-2, agent_pos=-1"
+201.80917737539858,cue_left,6,left,,,,,,0,,agent_pos=-1
+204.99443029100075,feedback_error,6,,right,False,primary,,3185,0,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=LEFT"
+205.2948670834303,primary_errp,6,,,,primary,,,0,,
+206.84925320837647,coin_missed,6,,,,,,,0,,"coin_lane=-2, agent_pos=0"
+207.84227708308026,coin_spawned,6,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+208.19526537507772,cue_left,6,left,,,,,,0,,agent_pos=0
+213.0100148753263,feedback_error,6,,right,False,primary,,4814,0,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=LEFT"
+213.31600804114714,primary_errp,6,,,,primary,,,0,,
+214.55416295817122,coin_missed,6,,,,,,,0,,"coin_lane=-1, agent_pos=1"
+215.54652445809916,coin_spawned,6,,,,,,,0,,"coin_lane=0, agent_pos=1"
+215.90060612512752,cue_left,6,left,,,,,,0,,agent_pos=1
+219.03028195817024,feedback_correct,6,,left,True,,,3129,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+219.5667002913542,coin_collected,6,,,,,,,1,,"coin_lane=0, agent_pos=0"
+220.0538712912239,coin_spawned,6,,,,,,,1,,"coin_lane=-1, agent_pos=0"
+220.40540825016797,cue_left,6,left,,,,,,1,,agent_pos=0
+225.04828241607174,feedback_correct,6,,left,True,,,4642,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+225.26753037516028,coin_collected,6,,,,,,,2,,"coin_lane=-1, agent_pos=-1"
+225.7560165412724,coin_spawned,6,,,,,,,2,,"coin_lane=-2, agent_pos=-1"
+226.108211458195,cue_left,6,left,,,,,,2,,agent_pos=-1
+231.04921933310106,feedback_error,6,,right,False,primary,,4941,2,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=LEFT"
+231.3520297082141,primary_errp,6,,,,primary,,,2,,
+232.55718825012445,coin_missed,6,,,,,,,2,,"coin_lane=-2, agent_pos=0"
+233.5477474583313,coin_spawned,6,,,,,,,2,,"coin_lane=1, agent_pos=0"
+233.90442800009623,cue_right,6,right,,,,,,2,,agent_pos=0
+237.07413570815697,feedback_correct,6,,left,True,,,3169,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+238.93698216602206,coin_missed,6,,,,,,,2,,"coin_lane=1, agent_pos=-1"
+239.92665391601622,coin_spawned,6,,,,,,,2,,"coin_lane=0, agent_pos=-1"
+240.27850687503815,cue_right,6,right,,,,,,2,,agent_pos=-1
+245.08957450045273,feedback_correct,6,,left,True,,,4811,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+246.6196909584105,coin_missed,6,,,,,,,2,,"coin_lane=0, agent_pos=-2"
+247.60582500044256,coin_spawned,6,,,,,,,2,,"coin_lane=-1, agent_pos=-2"
+247.95940787531435,cue_right,6,right,,,,,,2,,agent_pos=-2
+251.11626570811495,feedback_correct,6,,left,True,,,3156,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+252.98325245827436,coin_missed,6,,,,,,,2,,"coin_lane=-1, agent_pos=-3"
+253.97499716607854,coin_spawned,6,,,,,,,2,,"coin_lane=-2, agent_pos=-3"
+254.32728925021365,cue_right,6,right,,,,,,2,,agent_pos=-3
+259.1311852084473,feedback_correct,6,,left,True,,,4803,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+260.6836522910744,coin_missed,6,,,,,,,2,,"coin_lane=-2, agent_pos=-4"
+261.67978187510744,coin_spawned,6,,,,,,,2,,"coin_lane=-3, agent_pos=-4"
+262.0325387502089,cue_right,6,right,,,,,,2,,agent_pos=-4
+265.1663397080265,feedback_error,6,,right,False,primary,,3133,2,,"intended=MOVE_LEFT, executed=MOVE_RIGHT, movement_required=RIGHT"
+265.47144150035456,primary_errp,6,,,,primary,,,2,,
+265.703955208417,coin_collected,6,,,,,,,3,,"coin_lane=-3, agent_pos=-3"
+265.7079587080516,trial_end,6,,,,,,,3,,
+268.22369812522084,trial_start,7,,,,,,,,,difficulty=easy
+268.2243261253461,coin_spawned,7,,,,,,,0,,"coin_lane=1, agent_pos=0"
+268.57853133324534,cue_right,7,right,,,,,,0,,agent_pos=0
+273.1945587503724,feedback_correct,7,,left,True,,,4616,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+274.7716940003447,coin_missed,7,,,,,,,0,,"coin_lane=1, agent_pos=-1"
+275.76513804122806,coin_spawned,7,,,,,,,0,,"coin_lane=0, agent_pos=-1"
+276.1170775000937,cue_right,7,right,,,,,,0,,agent_pos=-1
+279.2016922500916,feedback_correct,7,,left,True,,,3084,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+281.0912679582834,coin_missed,7,,,,,,,0,,"coin_lane=0, agent_pos=-2"
+282.08528620842844,coin_spawned,7,,,,,,,0,,"coin_lane=-1, agent_pos=-2"
+282.43751650024205,cue_right,7,right,,,,,,0,,agent_pos=-2
+287.2300085001625,feedback_correct,7,,left,True,,,4792,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+288.7819520002231,coin_missed,7,,,,,,,0,,"coin_lane=-1, agent_pos=-3"
+289.77136712521315,coin_spawned,7,,,,,,,0,,"coin_lane=-4, agent_pos=-3"
+290.1252490412444,cue_left,7,left,,,,,,0,,agent_pos=-3
+293.24570762505755,feedback_correct,7,,left,True,,,3120,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+293.7831392912194,coin_collected,7,,,,,,,1,,"coin_lane=-4, agent_pos=-4"
+294.2707851254381,coin_spawned,7,,,,,,,1,,"coin_lane=-3, agent_pos=-4"
+294.6257908754051,cue_right,7,right,,,,,,1,,agent_pos=-4
+299.25742987543344,feedback_correct,7,,left,True,,,4631,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+300.8421197081916,coin_missed,7,,,,,,,1,,"coin_lane=-3, agent_pos=-5"
+301.83490195823833,coin_spawned,7,,,,,,,1,,"coin_lane=-6, agent_pos=-5"
+302.1918050413951,cue_left,7,left,,,,,,1,,agent_pos=-5
+305.27279533306137,feedback_correct,7,,left,True,,,3080,1,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+305.80730312503874,coin_collected,7,,,,,,,2,,"coin_lane=-6, agent_pos=-6"
+306.2953778752126,coin_spawned,7,,,,,,,2,,"coin_lane=-5, agent_pos=-6"
+306.65139908343554,cue_right,7,right,,,,,,2,,agent_pos=-6
+311.28962095826864,feedback_correct,7,,left,True,,,4638,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=RIGHT"
+312.8697533332743,coin_missed,7,,,,,,,2,,"coin_lane=-5, agent_pos=-7"
+313.8573532500304,coin_spawned,7,,,,,,,2,,"coin_lane=-8, agent_pos=-7"
+314.2096398752183,cue_left,7,left,,,,,,2,,agent_pos=-7
+317.3048325004056,feedback_correct,7,,left,True,,,3095,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+317.84283287543803,coin_collected,7,,,,,,,3,,"coin_lane=-8, agent_pos=-8"
+317.8469625003636,trial_end,7,,,,,,,3,,
+320.3675177083351,trial_start,8,,,,,,,,,difficulty=easy
+320.3681156663224,coin_spawned,8,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+320.7195717501454,cue_left,8,left,,,,,,0,,agent_pos=0
+325.3278415831737,feedback_correct,8,,left,True,,,4608,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+325.56299591623247,coin_collected,8,,,,,,,1,,"coin_lane=-1, agent_pos=-1"
+326.0545147913508,coin_spawned,8,,,,,,,1,,"coin_lane=-2, agent_pos=-1"
+326.412254541181,cue_left,8,left,,,,,,1,,agent_pos=-1

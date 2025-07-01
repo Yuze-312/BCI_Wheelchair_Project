@@ -1,0 +1,33 @@
+timestamp,event_type,trial_id,cue_class,predicted_class,accuracy,error_type,confidence,reaction_time,coins_collected,artifact_flag,details
+0.00037454208359122276,session_start,,,,,,,,,,"difficulty=easy, trials=5, mi_mode=False"
+0.0006056251004338264,trial_start,1,,,,,,,,,difficulty=easy
+0.0007752501405775547,coin_spawned,1,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+0.9956902922131121,cue_left,1,left,,,,,,0,,agent_pos=0
+2.853837958071381,feedback_correct,1,,left,True,,,1858,0,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+3.047325416933745,coin_collected,1,,,,,,,1,,"coin_lane=-1, agent_pos=-1"
+3.537744208239019,coin_spawned,1,,,,,,,1,,"coin_lane=0, agent_pos=-1"
+3.8901737919077277,cue_right,1,right,,,,,,1,,agent_pos=-1
+4.588882124982774,feedback_correct,1,,right,True,,,698,1,,"intended=MOVE_RIGHT, executed=MOVE_RIGHT, movement_required=RIGHT"
+5.61610604217276,coin_collected,1,,,,,,,2,,"coin_lane=0, agent_pos=0"
+6.102994374930859,coin_spawned,1,,,,,,,2,,"coin_lane=-1, agent_pos=0"
+6.4560272502712905,cue_left,1,left,,,,,,2,,agent_pos=0
+7.040116500109434,feedback_correct,1,,left,True,,,584,2,,"intended=MOVE_LEFT, executed=MOVE_LEFT, movement_required=LEFT"
+8.101460374891758,coin_collected,1,,,,,,,3,,"coin_lane=-1, agent_pos=-1"
+8.106078083161265,trial_end,1,,,,,,,3,,
+10.634014999959618,trial_start,2,,,,,,,,,difficulty=easy
+10.635771667119116,coin_spawned,2,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+11.626568625215441,cue_left,2,left,,,,,,0,,agent_pos=0
+16.62752683321014,cue_timeout,2,,,,,,,0,,agent_pos=0
+17.4803243749775,coin_missed,2,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+18.46560504194349,coin_spawned,2,,,,,,,0,,"coin_lane=1, agent_pos=0"
+18.817786375060678,cue_right,2,right,,,,,,0,,agent_pos=0
+23.829927207902074,cue_timeout,2,,,,,,,0,,agent_pos=0
+25.32956370804459,coin_missed,2,,,,,,,0,,"coin_lane=1, agent_pos=0"
+26.316858583129942,coin_spawned,2,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+26.67245737509802,cue_left,2,left,,,,,,0,,agent_pos=0
+31.677838874980807,cue_timeout,2,,,,,,,0,,agent_pos=0
+33.17385529214516,coin_missed,2,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+34.16880770819262,coin_spawned,2,,,,,,,0,,"coin_lane=-1, agent_pos=0"
+34.52096004225314,cue_left,2,left,,,,,,0,,agent_pos=0
+39.53492400003597,cue_timeout,2,,,,,,,0,,agent_pos=0
+41.030286124907434,coin_missed,2,,,,,,,0,,"coin_lane=-1, agent_pos=0"

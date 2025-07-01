@@ -1,0 +1,13 @@
+timestamp,event_type,trial_id,cue_class,predicted_class,accuracy,error_type,confidence,reaction_time,coins_collected,artifact_flag,details
+0.000,session_start,,,,,,,,,,session_id=2025-06-28T17:02:38.613970
+1.217,coin_spawned,0,,,,,,,,,relative_pos=-1
+1.375,cue_left,0,left,,,,,,,,agent_pos=0
+3.678,imagery_end,0,,,,,0.90,,,,
+3.678,feedback_correct,0,left,left,True,,,2303,,,user_input=MOVE_LEFT
+6.864,coin_collected,0,,,,,,,1,,relative_pos=0
+7.355,coin_spawned,0,,,,,,,1,,relative_pos=1
+7.542,cue_right,0,right,,,,,,,,agent_pos=-1
+8.056,imagery_end,0,,,,,0.90,,,,
+8.056,feedback_correct,0,right,right,True,,,514,1,,user_input=MOVE_RIGHT
+12.889,coin_collected,0,,,,,,,2,,relative_pos=0
+13.381,coin_spawned,0,,,,,,,2,,relative_pos=-1
