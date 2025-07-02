@@ -16,22 +16,25 @@ Usage:
 
 import sys
 import os
-
+from pylsl import StreamInlet, resolve_streams, StreamInfo, StreamOutlet
 # Import the original simulator components
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from run_simulation_2 import *  # Import everything from original (including hand images)
 
-# Import MI integration
 from mi_integration import MIController
-
 # Additional imports
 import argparse
 import threading
 import csv
 import random
 
-# Import control interface
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Import control interface from parent directory
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+
+# Import numeric markers
+from simple_markers import *
 # Use cumulative version for real-time with history
 from control_interface_cumulative import ControlInterface
 
@@ -51,6 +54,16 @@ os.makedirs(LOG_DIR, exist_ok=True)
 ERROR_RATE = 0.0  # No error injection
 PRACTICE_ERROR_RATE = 0.0  # No error injection in practice either
 
+# Override the string-based LSL stream from run_simulation_2 with numeric markers
+info = StreamInfo("SubwaySurfers_ErrP_Markers", "Markers", 1, 0, "int32", "subway-errp-001")
+outlet = StreamOutlet(info)
+
+# Override push_immediate to use numeric markers
+def push_immediate(marker):
+    """Push numeric marker immediately with LSL timestamp"""
+    outlet.push_sample([marker])
+    precision_tracker.mark_event(marker)
+
 # Aliases for compatibility
 World = EndlessWorld
 
@@ -58,7 +71,7 @@ World = EndlessWorld
 
 # Simple event logger for MI integration (compatible with OptimizedEventLogger)
 class UnifiedEventLogger:
-    """CSV event logger for MI integration - compatible with OptimizedEventLogger"""
+    """CSV event logger for MI integration - uses numeric markers matching LSL"""
     
     def __init__(self, filepath, difficulty=None, mi_mode=False):
         self.filepath = filepath
@@ -73,22 +86,23 @@ class UnifiedEventLogger:
         # Create log directory if needed
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
-        # Write header
+        # Write header - event_type is now numeric
         with open(filepath, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
-                'timestamp', 'event_type', 'trial_id', 'cue_class', 
+                'timestamp', 'event_type', 'event_name', 'trial_id', 'cue_class', 
                 'predicted_class', 'accuracy', 'error_type', 'confidence',
                 'reaction_time', 'coins_collected', 'artifact_flag', 'details'
             ])
     
-    def _add_event(self, timestamp, event_type, trial_id='', cue_class='', 
+    def _add_event(self, timestamp, event_type, event_name='', trial_id='', cue_class='', 
                    predicted_class='', accuracy='', error_type='', confidence='',
                    reaction_time='', coins_collected='', artifact_flag='', details=''):
-        """Add event to log (internal method)"""
+        """Add event to log with numeric type and name"""
         event = {
             'timestamp': timestamp,
             'event_type': event_type,
+            'event_name': event_name,
             'trial_id': trial_id,
             'cue_class': cue_class,
             'predicted_class': predicted_class,
@@ -108,20 +122,21 @@ class UnifiedEventLogger:
         self.current_trial = trial_num
         self.trial_start_time = get_sync_time()
         timestamp = self.trial_start_time - self.session_start_time
-        self._add_event(timestamp, 'trial_start', trial_id=str(trial_num), 
+        self._add_event(timestamp, MARKER_TRIAL_START, 'TRIAL_START', trial_id=str(trial_num), 
                        details=f'difficulty={difficulty}')
     
     def log_trial_start(self, trial_num, difficulty, is_practice):
         """Log trial start (compatibility method)"""
         self.start_trial(trial_num, difficulty)
         if is_practice:
-            self.log_event('practice_trial', f'trial={trial_num}')
+            self.log_event(MARKER_TRIAL_START, 'PRACTICE_TRIAL', f'trial={trial_num}')
     
     def log_cue(self, cue_word, agent_position, coins_collected):
         """Log cue presentation"""
         self.cue_onset_time = get_sync_time()
         timestamp = self.cue_onset_time - self.session_start_time
-        self._add_event(timestamp, f'cue_{cue_word.lower()}', 
+        marker = MARKER_CUE_LEFT if cue_word.upper() == 'LEFT' else MARKER_CUE_RIGHT
+        self._add_event(timestamp, marker, f'CUE_{cue_word.upper()}',
                        trial_id=str(self.current_trial),
                        cue_class=cue_word.lower(),
                        coins_collected=str(coins_collected),
@@ -167,7 +182,9 @@ class UnifiedEventLogger:
         elif not action_correct and user_input != "NONE":
             error_type = 'secondary' # User made wrong choice
         
-        self._add_event(timestamp, 'feedback_error' if is_error_injection else 'feedback_correct',
+        marker = MARKER_RESPONSE_ERROR if is_error_injection else MARKER_RESPONSE_CORRECT
+        event_name = 'FEEDBACK_ERROR' if is_error_injection else 'FEEDBACK_CORRECT'
+        self._add_event(timestamp, marker, event_name,
                        trial_id=str(self.current_trial),
                        predicted_class=predicted_class,
                        accuracy=accuracy,
@@ -179,7 +196,7 @@ class UnifiedEventLogger:
         if is_error_injection:
             # Log ErrP event 300ms later
             threading.Timer(0.3, lambda: self._add_event(
-                get_sync_time() - self.session_start_time, 'primary_errp',
+                get_sync_time() - self.session_start_time, MARKER_RESPONSE_ERROR, 'PRIMARY_ERRP',
                 trial_id=str(self.current_trial),
                 error_type='primary',
                 coins_collected=str(coins_collected)
@@ -188,14 +205,8 @@ class UnifiedEventLogger:
     def log_coin_event(self, event_type, coin_world_lane, agent_position, coins_collected):
         """Log coin-related events"""
         timestamp = get_sync_time() - self.session_start_time
-        event_type_map = {
-            'COIN_SPAWNED': 'coin_spawned',
-            'COIN_COLLECTED': 'coin_collected',
-            'COIN_MISSED': 'coin_missed'
-        }
-        mapped_type = event_type_map.get(event_type, event_type.lower())
-        
-        self._add_event(timestamp, mapped_type,
+        # Use generic marker for coin events (not critical for EEG)
+        self._add_event(timestamp, MARKER_SESSION, event_type,
                        trial_id=str(self.current_trial),
                        coins_collected=str(coins_collected),
                        details=f'coin_lane={coin_world_lane}, agent_pos={agent_position}')
@@ -203,7 +214,7 @@ class UnifiedEventLogger:
     def log_cue_timeout(self, agent_position, coins_collected):
         """Log cue timeout"""
         timestamp = get_sync_time() - self.session_start_time
-        self._add_event(timestamp, 'cue_timeout',
+        self._add_event(timestamp, MARKER_NO_RESPONSE, 'CUE_TIMEOUT',
                        trial_id=str(self.current_trial),
                        coins_collected=str(coins_collected),
                        details=f'agent_pos={agent_position}')
@@ -211,14 +222,14 @@ class UnifiedEventLogger:
     def log_trial_complete(self, coins_collected):
         """Log trial completion"""
         timestamp = get_sync_time() - self.session_start_time
-        self._add_event(timestamp, 'trial_end',
+        self._add_event(timestamp, MARKER_TRIAL_START, 'TRIAL_END',
                        trial_id=str(self.current_trial),
                        coins_collected=str(coins_collected))
     
-    def log_event(self, event_type, details=""):
+    def log_event(self, marker, event_name, details=""):
         """Log a general event (compatibility method)"""
         timestamp = get_sync_time() - self.session_start_time
-        self._add_event(timestamp, event_type.lower(),
+        self._add_event(timestamp, marker, event_name,
                        trial_id=str(self.current_trial) if self.current_trial else '',
                        details=details)
     
@@ -230,11 +241,73 @@ class UnifiedEventLogger:
         """Write event to CSV"""
         with open(self.filepath, 'a', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=[
-                'timestamp', 'event_type', 'trial_id', 'cue_class', 
+                'timestamp', 'event_type', 'event_name', 'trial_id', 'cue_class', 
                 'predicted_class', 'accuracy', 'error_type', 'confidence',
                 'reaction_time', 'coins_collected', 'artifact_flag', 'details'
             ])
             writer.writerow(event)
+
+
+# Override WordCue class to use numeric markers
+class WordCue:
+    """Visual word cue system with numeric markers for EEG"""
+    def __init__(self):
+        self.active = False
+        self.cue_word = ""
+        self.start_time = 0
+        self.think_duration = 0
+        self.flash_timer = 0
+        # For EEG alignment: track both real and game time
+        self.real_start_time = 0
+        self.game_time_elapsed = 0
+        
+    def show_cue(self, word, duration):
+        """Display word cue - duration is in REAL TIME for consistent EEG epochs"""
+        self.active = True
+        self.cue_word = word
+        self.start_time = get_sync_time()
+        self.real_start_time = self.start_time  # Store for reaction time calculation
+        self.think_duration = duration  # This is now REAL TIME duration
+        self.flash_timer = 0
+        self.game_time_elapsed = 0
+        
+        # Send numeric marker based on cue direction
+        if word == "LEFT":
+            push_immediate(MARKER_CUE_LEFT)
+        else:
+            push_immediate(MARKER_CUE_RIGHT)
+        
+    def update(self, speed_factor=1.0):
+        """Update cue state - cue duration based on REAL time, not game time"""
+        if self.active:
+            self.flash_timer += 1
+            
+            # Track game time for visual effects
+            frame_time = 1.0 / FPS
+            self.game_time_elapsed += frame_time * speed_factor
+            
+            # Check if REAL TIME duration has elapsed
+            real_time_elapsed = get_sync_time() - self.start_time
+            
+            if real_time_elapsed >= self.think_duration:
+                self.active = False
+                # Send end marker
+                push_immediate(MARKER_CUE_END)
+                return True
+        return False
+    
+    def get_remaining_time(self):
+        """Get remaining think time in REAL TIME"""
+        if self.active:
+            real_time_elapsed = get_sync_time() - self.start_time
+            return max(0, self.think_duration - real_time_elapsed)
+        return 0
+    
+    def get_reaction_time(self, response_timestamp):
+        """Calculate reaction time from cue onset in milliseconds"""
+        if self.real_start_time > 0:
+            return (response_timestamp - self.real_start_time) * 1000
+        return None
 
 
 def run_mi_integrated_game(control_mode='keyboard'):
@@ -353,8 +426,8 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
     print(f"\n📊 Logging to: {log_path}")
     
     # Session start
-    push_immediate("SESSION_START")
-    errp_logger.log_event("SESSION_START", f"difficulty={difficulty}, trials={total_trials}, mi_mode={mi_controller is not None}")
+    push_immediate(MARKER_SESSION)
+    errp_logger.log_event(MARKER_SESSION, "SESSION_START", f"difficulty={difficulty}, trials={total_trials}, mi_mode={mi_controller is not None}")
     
     # First run practice trials if any
     all_trials = practice_trials + total_trials
@@ -376,8 +449,8 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             # Show practice complete message only if there were practice trials
             if practice_trials > 0:
                 show_trial_transition(screen, trial_num, all_trials, difficulty, target_coins, is_practice=False)
-                push_immediate("MAIN_TRIALS_START")
-                errp_logger.log_event("MAIN_TRIALS_START", f"practice_complete={practice_trials}")
+                push_immediate(MARKER_SESSION)
+                errp_logger.log_event(MARKER_SESSION, "MAIN_TRIALS_START", f"practice_complete={practice_trials}")
         
         # Update trial context for logging
         is_practice = trial_num <= practice_trials
@@ -416,7 +489,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
         think_time = 5.0  # Fixed 5s window for all cues
         
         # Trial start marker
-        push_immediate(f"TRIAL_START_{trial_num}")
+        push_immediate(MARKER_TRIAL_START)
         
         # Main trial loop
         while trial_running:
@@ -456,6 +529,12 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                                 executed = user_intended
                                 error_injected = False
                             
+                            # Send response marker
+                            if error_injected:
+                                push_immediate(MARKER_RESPONSE_ERROR)
+                            else:
+                                push_immediate(MARKER_RESPONSE_CORRECT)
+                            
                             # Execute movement
                             if executed == "MOVE_LEFT":
                                 agent.move_left()
@@ -487,8 +566,8 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                             
                             # Clear cue
                             word_cue.active = False
-                            push_immediate(f"CUE_END_{word_cue.cue_word}")
-                            push_immediate("IMAGERY_END")
+                            push_immediate(MARKER_CUE_END)
+                            push_immediate(MARKER_CUE_END)
                             
                             action_count += 1
                             cue_cooldown = 60
@@ -517,6 +596,12 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                     else:
                         executed = user_intended
                         error_injected = False
+                    
+                    # Send response marker
+                    if error_injected:
+                        push_immediate(MARKER_RESPONSE_ERROR)
+                    else:
+                        push_immediate(MARKER_RESPONSE_CORRECT)
                     
                     # Execute movement
                     if executed == "MOVE_LEFT":
@@ -551,8 +636,8 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                     
                     # Clear cue
                     word_cue.active = False
-                    push_immediate(f"CUE_END_{word_cue.cue_word}")
-                    push_immediate("IMAGERY_END")
+                    push_immediate(MARKER_CUE_END)
+                    push_immediate(MARKER_CUE_END)
                     
                     # End MI cue
                     if mi_controller and control_interface.mode == 'mock_eeg':
@@ -567,7 +652,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             
             # Check for cue timeout
             if cue_ended and action_count == 0:
-                push_immediate(f"CUE_TIMEOUT_{word_cue.cue_word}")
+                push_immediate(MARKER_NO_RESPONSE)
                 errp_logger.log_cue_timeout(agent.get_world_position(), agent.coins_collected)
                 
                 if mi_controller and control_interface.mode == 'mock_eeg':
@@ -634,8 +719,8 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                             else:
                                 cue_word = random.choice(["LEFT", "RIGHT"])
                             
-                            push_immediate(f"BASELINE_START")
-                            push_immediate(f"BASELINE_END")
+                            push_immediate(MARKER_BASELINE)
+                            push_immediate(MARKER_BASELINE)
                             
                             # Adjust slow motion factor based on distance
                             if distance_to_agent < 250:
@@ -692,7 +777,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             # Check trial completion
             if agent.coins_collected >= params['target_coins']:
                 completion_start = time.perf_counter()
-                push_immediate(f"TRIAL_COMPLETE_{trial_num}")
+                push_immediate(MARKER_TRIAL_START)
                 errp_logger.log_trial_complete(agent.coins_collected)
                 show_trial_complete(screen, agent, params['target_coins'])
                 trial_running = False
