@@ -14,6 +14,36 @@ from collections import deque
 class ControlInterface:
     """Control interface with cumulative command tracking"""
     
+    def _find_project_root(self):
+        """Find project root by looking for marker files"""
+        current = os.path.dirname(os.path.abspath(__file__))
+        
+        # Look for project markers going up the directory tree
+        markers = ['README.md', '.git', 'requirements.txt', 'setup.py']
+        
+        while current != os.path.dirname(current):  # not at filesystem root
+            # Check if this is the BCI_Wheelchair_Project directory
+            if os.path.basename(current) == 'BCI_Wheelchair_Project':
+                return current
+                
+            # Check for any marker files
+            for marker in markers:
+                if os.path.exists(os.path.join(current, marker)):
+                    return current
+                    
+            # Go up one directory
+            current = os.path.dirname(current)
+            
+        # If we can't find project root, use parent of current file's directory
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    def _get_control_file_path(self):
+        """Get the control file path relative to current directory"""
+        # Since this file is already in the simulation directory,
+        # just use the current directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(current_dir, 'eeg_cumulative_control.txt')
+    
     def __init__(self, mode='keyboard'):
         """
         Initialize control interface
@@ -27,6 +57,7 @@ class ControlInterface:
         self.action_consumed = False
         self.command_history = []
         self.last_command_count = 0
+        self.cue_start_command_index = None  # Mark where commands start for current cue
         
         # Mode-specific initialization
         if mode == 'mock_eeg':
@@ -39,7 +70,7 @@ class ControlInterface:
     def _init_mock_eeg(self):
         """Initialize mock EEG with cumulative file control"""
         print("Initializing mock EEG with file control...")
-        self.control_file = os.path.join(os.path.dirname(__file__), 'eeg_cumulative_control.txt')
+        self.control_file = self._get_control_file_path()
         
         # Create control file if it doesn't exist
         if not os.path.exists(self.control_file):
@@ -61,7 +92,9 @@ class ControlInterface:
     
     def _init_real_eeg(self):
         """Initialize cumulative real-time monitoring"""
-        self.control_file = os.path.join(os.path.dirname(__file__), 'eeg_cumulative_control.txt')
+        # Find project root by looking for marker files
+        self.control_file = self._get_control_file_path()
+        print(f"[DEBUG] Control file path: {self.control_file}")
         
         # Create control file if it doesn't exist
         if not os.path.exists(self.control_file):
@@ -76,6 +109,26 @@ class ControlInterface:
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
         
+        # Read initial command count to avoid processing old commands
+        try:
+            with open(self.control_file, 'r') as f:
+                content = f.read().strip()
+                lines = content.split('\n')
+                for line in reversed(lines):
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        parts = line.replace(',', ' ').split()
+                        initial_commands = [p.strip() for p in parts if p.strip() in ['1', '2']]
+                        self.last_command_count = len(initial_commands)
+                        print(f"  Found {self.last_command_count} existing commands - will ignore these")
+                        break
+        except:
+            pass
+        
+        # IMPORTANT: If file is empty or just has comments, ensure count is 0
+        if self.last_command_count == 0:
+            print("  Starting with clean command history")
+            
         print(f"✓ Cumulative real-time control file: {self.control_file}")
         print("  Each update shows: previous_commands, new_command")
         print("  Example: 1 → 1, 2 → 1, 2, 1 → etc.")
@@ -117,10 +170,30 @@ class ControlInterface:
                         
                         # Check if we have new commands
                         if len(commands) > self.last_command_count:
-                            # New command(s) detected
-                            new_commands = commands[self.last_command_count:]
+                            # During a cue, only process commands that came AFTER the cue started
+                            if self.cue_start_command_index is not None:
+                                # Skip any commands that existed before the cue
+                                if len(commands) <= self.cue_start_command_index:
+                                    # No new commands since cue started
+                                    continue
+                                    
+                                # Only look at commands after cue start
+                                effective_position = max(self.last_command_count, self.cue_start_command_index)
+                                new_commands = commands[effective_position:]
+                            else:
+                                # No active cue, process normally
+                                new_commands = commands[self.last_command_count:]
                             
-                            for cmd in new_commands:
+                            if new_commands:
+                                print(f"[CONTROL] Detected {len(new_commands)} new commands: {new_commands}")
+                                print(f"[CONTROL] Current position: {self.last_command_count}, Total commands: {len(commands)}")
+                                if self.cue_start_command_index is not None:
+                                    print(f"[CONTROL] Cue started at index: {self.cue_start_command_index}")
+                                
+                                # IMPORTANT: Only process the FIRST new command for this cue
+                                # This prevents processing multiple commands that may have queued up
+                                cmd = new_commands[0]
+                                
                                 # Process the new command
                                 if cmd == '1':
                                     self.current_action = pygame.K_LEFT
@@ -128,6 +201,7 @@ class ControlInterface:
                                 else:  # cmd == '2'
                                     self.current_action = pygame.K_RIGHT
                                     action_name = "RIGHT"
+                                print(f"[CONTROL] Set action: {action_name}")
                                 
                                 self.action_consumed = False
                                 
@@ -136,17 +210,21 @@ class ControlInterface:
                                     'command': cmd,
                                     'action': action_name,
                                     'timestamp': time.time(),
-                                    'detected_at': time.strftime('%H:%M:%S.%f')[:-3],
-                                    'cumulative_position': len(self.command_history) + 1
+                                    'detected_at': time.strftime('%H:%M:%S'),
+                                    'cumulative_position': self.last_command_count + 1
                                 })
                                 
                                 print(f"[{time.strftime('%H:%M:%S')}] New command detected: {action_name}")
                                 print(f"                     Cumulative history: {', '.join(commands)}")
-                            
-                            self.last_command_count = len(commands)
+                                
+                                # Update to process only one command at a time
+                                self.last_command_count += 1
+                            else:
+                                # No new commands
+                                self.last_command_count = len(commands)
                 
             except Exception as e:
-                pass  # Silently handle file access errors
+                print(f"[CONTROL ERROR] {e}")  # Show errors instead of silently failing
             
             time.sleep(0.01)  # Check 100 times per second for faster response
     
@@ -170,6 +248,7 @@ class ControlInterface:
                 # Reset action when cue is not active
                 self.current_action = None
                 self.action_consumed = False
+                self.cue_start_command_index = None  # Clear cue index
                 return None
             
             # Return current action if not consumed
@@ -185,6 +264,7 @@ class ControlInterface:
                 # Reset action when cue is not active
                 self.current_action = None
                 self.action_consumed = False
+                self.cue_start_command_index = None  # Clear cue index
                 return None
             
             # Return current action if not consumed
@@ -200,6 +280,11 @@ class ControlInterface:
         """Reset action state for a new cue"""
         self.current_action = None
         self.action_consumed = False
+        
+        # CRITICAL: Mark current command index at cue start
+        # Only commands AFTER this index should be executed during the cue
+        self.cue_start_command_index = self.last_command_count
+        print(f"[CONTROL] New cue started - will only accept commands after index {self.cue_start_command_index}")
     
     def process_keyboard_event(self, event):
         """Process keyboard events (only in keyboard mode)"""

@@ -20,9 +20,9 @@ def main():
                        help='Participant ID (e.g., T-009)')
     parser.add_argument('--sessions', nargs='+', default=None,
                        help='Sessions to process (e.g., Session 1 Session 2). Default: all')
-    parser.add_argument('--base-path', type=str, default='MI/EEG data',
+    parser.add_argument('--base-path', type=str, default='EEG data',
                        help='Base path to EEG data folder (default: MI/EEG data)')
-    parser.add_argument('--output-dir', type=str, default='MI/processed_data',
+    parser.add_argument('--output-dir', type=str, default='processed_data',
                        help='Output directory for processed data (default: MI/processed_data)')
     args = parser.parse_args()
     

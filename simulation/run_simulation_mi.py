@@ -46,32 +46,31 @@ SCREEN_HEIGHT = 900
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# Error rates
-# ERROR_RATE = ERROR_P  # Use ERROR_P from run_simulation_2
-# PRACTICE_ERROR_RATE = ERROR_P * 0.3  # 9% for practice vs 30% for main
-
-# DISABLED ERROR INJECTION FOR TESTING
-ERROR_RATE = 0.0  # No error injection
-PRACTICE_ERROR_RATE = 0.0  # No error injection in practice either
+# Error rates - disabled for testing
+# Removed error rate - simulator executes commands exactly as received
 
 # Override the string-based LSL stream from run_simulation_2 with numeric markers
-info = StreamInfo("SubwaySurfers_ErrP_Markers", "Markers", 1, 0, "int32", "subway-errp-001")
+info = StreamInfo("Outlet_Info", "Markers", 1, 0, "int32", "subway-errp-001")
 outlet = StreamOutlet(info)
 
 # Override push_immediate to use numeric markers
 def push_immediate(marker):
     """Push numeric marker immediately with LSL timestamp"""
+    print(marker)
     outlet.push_sample([marker])
     precision_tracker.mark_event(marker)
+    print(f"[LSL] Sent marker: {marker} at {get_sync_time():.3f}")
 
 # Aliases for compatibility
 World = EndlessWorld
 
-# Note: OptimizedEventLogger is defined inside main(), so we'll handle it differently
-
 # Simple event logger for MI integration (compatible with OptimizedEventLogger)
 class UnifiedEventLogger:
     """CSV event logger for MI integration - uses numeric markers matching LSL"""
+    
+    # Numeric encoding mappings
+    DIRECTION_MAP = {'left': 0, 'right': 1}
+    ERROR_TYPE_MAP = {'': 0, 'primary': 1, 'secondary': 2, 'combined': 3}
     
     def __init__(self, filepath, difficulty=None, mi_mode=False):
         self.filepath = filepath
@@ -82,6 +81,8 @@ class UnifiedEventLogger:
         self.current_trial = None
         self.trial_start_time = None
         self.cue_onset_time = None
+        self.current_cue = None  # Track current cue for accuracy calculation
+        self.current_gt = None  # Ground truth (0=left, 1=right)
         
         # Create log directory if needed
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -89,30 +90,45 @@ class UnifiedEventLogger:
         # Write header - event_type is now numeric
         with open(filepath, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([
-                'timestamp', 'event_type', 'event_name', 'trial_id', 'cue_class', 
-                'predicted_class', 'accuracy', 'error_type', 'confidence',
-                'reaction_time', 'coins_collected', 'artifact_flag', 'details'
-            ])
+            # New format: timestamp, relative_time, trial, event, classifier_out, confidence, gt
+            writer.writerow(['timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
     
     def _add_event(self, timestamp, event_type, event_name='', trial_id='', cue_class='', 
                    predicted_class='', accuracy='', error_type='', confidence='',
                    reaction_time='', coins_collected='', artifact_flag='', details=''):
-        """Add event to log with numeric type and name"""
+        """Add event to log with new format"""
+        # Calculate relative time from cue onset
+        rel_time = ''
+        if self.cue_onset_time and event_type in [MARKER_RESPONSE_CORRECT, MARKER_RESPONSE_ERROR]:
+            rel_time = f"{(timestamp - (self.cue_onset_time - self.session_start_time)):.3f}"
+        elif event_type in [MARKER_CUE_LEFT, MARKER_CUE_RIGHT]:
+            rel_time = '0.000'  # Cue onset is time zero
+        
+        # Classifier output and confidence (only for response events)
+        classifier_out = ''
+        conf = ''
+        if event_type in [MARKER_RESPONSE_CORRECT, MARKER_RESPONSE_ERROR]:
+            classifier_out = predicted_class  # 0=left, 1=right
+            # Scale confidence 0-100% to 0-9
+            if confidence:
+                conf = str(min(9, int(float(confidence) * 10)))
+        
+        # Ground truth (current cue)
+        gt = ''
+        if event_type in [MARKER_CUE_LEFT, MARKER_CUE_RIGHT]:
+            gt = '0' if event_type == MARKER_CUE_LEFT else '1'
+            self.current_gt = gt  # Store for response events
+        elif event_type in [MARKER_RESPONSE_CORRECT, MARKER_RESPONSE_ERROR]:
+            gt = self.current_gt if self.current_gt else ''
+        
         event = {
-            'timestamp': timestamp,
-            'event_type': event_type,
-            'event_name': event_name,
-            'trial_id': trial_id,
-            'cue_class': cue_class,
-            'predicted_class': predicted_class,
-            'accuracy': accuracy,
-            'error_type': error_type,
-            'confidence': confidence,
-            'reaction_time': reaction_time,
-            'coins_collected': coins_collected,
-            'artifact_flag': artifact_flag,
-            'details': details
+            'timestamp': f"{timestamp:.3f}",
+            'rel_time': rel_time,
+            'trial': trial_id,
+            'event': str(event_type),
+            'classifier_out': classifier_out,
+            'confidence': conf,
+            'gt': gt
         }
         self.events.append(event)
         self._write_event(event)
@@ -122,28 +138,35 @@ class UnifiedEventLogger:
         self.current_trial = trial_num
         self.trial_start_time = get_sync_time()
         timestamp = self.trial_start_time - self.session_start_time
+        # Convert difficulty to numeric (0=easy, 1=medium, 2=hard)
+        diff_map = {'easy': 0, 'medium': 1, 'hard': 2}
+        diff_numeric = diff_map.get(difficulty, 0)
         self._add_event(timestamp, MARKER_TRIAL_START, 'TRIAL_START', trial_id=str(trial_num), 
-                       details=f'difficulty={difficulty}')
+                       details=str(diff_numeric))
     
     def log_trial_start(self, trial_num, difficulty, is_practice):
         """Log trial start (compatibility method)"""
         self.start_trial(trial_num, difficulty)
         if is_practice:
-            self.log_event(MARKER_TRIAL_START, 'PRACTICE_TRIAL', f'trial={trial_num}')
+            self.log_event(MARKER_TRIAL_START, 'PRACTICE_TRIAL', str(trial_num))
     
     def log_cue(self, cue_word, agent_position, coins_collected):
         """Log cue presentation"""
         self.cue_onset_time = get_sync_time()
+        self.current_cue = cue_word.upper()  # Store current cue
         timestamp = self.cue_onset_time - self.session_start_time
+        self.current_gt = '0' if cue_word.upper() == 'LEFT' else '1'  # Set ground truth
         marker = MARKER_CUE_LEFT if cue_word.upper() == 'LEFT' else MARKER_CUE_RIGHT
+        # Convert cue_class to numeric (0=left, 1=right)
+        cue_class_numeric = self.DIRECTION_MAP.get(cue_word.lower(), '')
         self._add_event(timestamp, marker, f'CUE_{cue_word.upper()}',
                        trial_id=str(self.current_trial),
-                       cue_class=cue_word.lower(),
+                       cue_class=str(cue_class_numeric),
                        coins_collected=str(coins_collected),
-                       details=f'agent_pos={agent_position}')
+                       details=str(agent_position))  # Just the position number
     
-    def log_action(self, user_input, executed_action, agent_position, coins_collected, movement_required):
-        """Log action execution"""
+    def log_action(self, user_input, executed_action, agent_position, coins_collected, movement_required, confidence=0.0):
+        """Log action execution with confidence"""
         timestamp = get_sync_time() - self.session_start_time
         
         # Check if there was error injection (primary error)
@@ -154,70 +177,71 @@ class UnifiedEventLogger:
         if self.cue_onset_time:
             reaction_time = str(int((get_sync_time() - self.cue_onset_time) * 1000))
         
-        # Determine predicted class from executed action
+        # Determine predicted class from user's intended action (0=left, 1=right)
         predicted_class = ''
-        if 'LEFT' in executed_action:
-            predicted_class = 'left'
-        elif 'RIGHT' in executed_action:
-            predicted_class = 'right'
+        if 'LEFT' in user_input:
+            predicted_class = '0'
+        elif 'RIGHT' in user_input:
+            predicted_class = '1'
         
-        # Check if action matches the required movement (cue)
-        # movement_required will be like "LEFT" or "RIGHT"
+        # Check if user's intended action matches the cue
         action_correct = False
-        if movement_required:
-            if movement_required == 'LEFT' and 'LEFT' in executed_action:
+        if self.current_cue:
+            if self.current_cue == 'LEFT' and 'LEFT' in user_input:
                 action_correct = True
-            elif movement_required == 'RIGHT' and 'RIGHT' in executed_action:
+            elif self.current_cue == 'RIGHT' and 'RIGHT' in user_input:
                 action_correct = True
         
-        # Accuracy is whether the action matched the cue (not about error injection)
-        accuracy = str(action_correct)
+        # Accuracy is whether the user's intended action matched the cue (0=false, 1=true)
+        accuracy = '1' if action_correct else '0'
         
-        # Determine error type
-        error_type = ''
+        # Determine error type (0=none, 1=primary, 2=secondary, 3=combined)
+        error_type_str = ''
         if is_error_injection and not action_correct:
-            error_type = 'combined'  # Both primary (injection) and secondary (wrong action)
+            error_type_str = 'combined'  # Both primary (injection) and secondary (wrong action)
         elif is_error_injection:
-            error_type = 'primary'   # Only error injection
+            error_type_str = 'primary'   # Only error injection
         elif not action_correct and user_input != "NONE":
-            error_type = 'secondary' # User made wrong choice
+            error_type_str = 'secondary' # User made wrong choice
         
-        marker = MARKER_RESPONSE_ERROR if is_error_injection else MARKER_RESPONSE_CORRECT
-        event_name = 'FEEDBACK_ERROR' if is_error_injection else 'FEEDBACK_CORRECT'
+        error_type = str(self.ERROR_TYPE_MAP.get(error_type_str, 0))
+        
+        # Use the already-sent marker value for consistency
+        marker = MARKER_RESPONSE_ERROR if not action_correct else MARKER_RESPONSE_CORRECT
+        event_name = 'RESPONSE_ERROR' if not action_correct else 'RESPONSE_CORRECT'
         self._add_event(timestamp, marker, event_name,
                        trial_id=str(self.current_trial),
                        predicted_class=predicted_class,
                        accuracy=accuracy,
                        error_type=error_type,
+                       confidence=str(confidence),
                        reaction_time=reaction_time,
                        coins_collected=str(coins_collected),
-                       details=f'intended={user_input}, executed={executed_action}, movement_required={movement_required}')
+                       details='')  # Details not needed with numeric encoding
         
         if is_error_injection:
             # Log ErrP event 300ms later
             threading.Timer(0.3, lambda: self._add_event(
                 get_sync_time() - self.session_start_time, MARKER_RESPONSE_ERROR, 'PRIMARY_ERRP',
                 trial_id=str(self.current_trial),
-                error_type='primary',
+                error_type='1',  # primary error
                 coins_collected=str(coins_collected)
             )).start()
+        
+        # Clear current cue after action
+        self.current_cue = None
     
     def log_coin_event(self, event_type, coin_world_lane, agent_position, coins_collected):
-        """Log coin-related events"""
-        timestamp = get_sync_time() - self.session_start_time
-        # Use generic marker for coin events (not critical for EEG)
-        self._add_event(timestamp, MARKER_SESSION, event_type,
-                       trial_id=str(self.current_trial),
-                       coins_collected=str(coins_collected),
-                       details=f'coin_lane={coin_world_lane}, agent_pos={agent_position}')
+        """Log coin-related events - DISABLED for cleaner logs"""
+        # Coin events are not needed for EEG analysis
+        pass
     
     def log_cue_timeout(self, agent_position, coins_collected):
-        """Log cue timeout"""
-        timestamp = get_sync_time() - self.session_start_time
-        self._add_event(timestamp, MARKER_NO_RESPONSE, 'CUE_TIMEOUT',
-                       trial_id=str(self.current_trial),
-                       coins_collected=str(coins_collected),
-                       details=f'agent_pos={agent_position}')
+        """Log cue timeout - DISABLED for cleaner logs"""
+        # Clear current cue on timeout
+        self.current_cue = None
+        # Timeout events are not needed for simplified marker system
+        pass
     
     def log_trial_complete(self, coins_collected):
         """Log trial completion"""
@@ -225,13 +249,21 @@ class UnifiedEventLogger:
         self._add_event(timestamp, MARKER_TRIAL_START, 'TRIAL_END',
                        trial_id=str(self.current_trial),
                        coins_collected=str(coins_collected))
+        # Clear current cue at trial end
+        self.current_cue = None
     
     def log_event(self, marker, event_name, details=""):
         """Log a general event (compatibility method)"""
-        timestamp = get_sync_time() - self.session_start_time
-        self._add_event(timestamp, marker, event_name,
-                       trial_id=str(self.current_trial) if self.current_trial else '',
-                       details=details)
+        # Only log essential markers for simplified system
+        essential_markers = [MARKER_CUE_LEFT, MARKER_CUE_RIGHT, 
+                           MARKER_RESPONSE_CORRECT, MARKER_RESPONSE_ERROR,
+                           MARKER_TRIAL_START]
+        
+        if marker in essential_markers:
+            timestamp = get_sync_time() - self.session_start_time
+            self._add_event(timestamp, marker, event_name,
+                           trial_id=str(self.current_trial) if self.current_trial else '',
+                           details='')  # Simplified - no details needed
     
     def save(self):
         """Save is automatic with each event, but kept for compatibility"""
@@ -240,11 +272,7 @@ class UnifiedEventLogger:
     def _write_event(self, event):
         """Write event to CSV"""
         with open(self.filepath, 'a', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=[
-                'timestamp', 'event_type', 'event_name', 'trial_id', 'cue_class', 
-                'predicted_class', 'accuracy', 'error_type', 'confidence',
-                'reaction_time', 'coins_collected', 'artifact_flag', 'details'
-            ])
+            writer = csv.DictWriter(f, fieldnames=['timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
             writer.writerow(event)
 
 
@@ -291,8 +319,6 @@ class WordCue:
             
             if real_time_elapsed >= self.think_duration:
                 self.active = False
-                # Send end marker
-                push_immediate(MARKER_CUE_END)
                 return True
         return False
     
@@ -335,7 +361,7 @@ def run_mi_integrated_game(control_mode='keyboard'):
     elif control_mode == 'mock_eeg':
         print("Using: Mock EEG stream (run mock_eeg_simple.py)")
     elif control_mode == 'real_eeg':
-        print("Using: Real EEG file control (eeg_control.txt)")
+        print("Using: Real EEG file control (eeg_cumulative_control.txt)")
     
     print("="*60 + "\n")
     
@@ -368,14 +394,14 @@ def run_mi_integrated_game(control_mode='keyboard'):
             print("Failed to connect to mock EEG stream!")
             print("Please run mock_eeg_simple.py in another terminal.")
             return
-        print("✓ Connected to mock EEG stream")
+        print("Connected to mock EEG stream")
         
         # Start MI monitoring
         mi_controller.start_monitoring()
-        print("✓ MI monitoring started\n")
+        print("MI monitoring started\n")
     
     # Run the main game with control integration
-    main_with_mi(difficulty, total_trials, practice_trials, mi_controller, control_interface)
+    main_with_mi(difficulty, total_trials, practice_trials, mi_controller, control_interface, control_mode)
     
     # Cleanup
     if control_interface:
@@ -400,7 +426,7 @@ def run_mi_integrated_game(control_mode='keyboard'):
         print("="*60)
 
 
-def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, control_interface=None):
+def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, control_interface=None, control_mode='keyboard'):
     """
     Modified main function with different control modes
     Based on the original main() but with flexible control added
@@ -420,14 +446,14 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
     
     # Create unified event logger
     session_id = int(time.time())
+    
+    # Always save to simulation/logs directory
     log_path = os.path.join(LOG_DIR, f"subway_errp_{session_id}.csv")
+    
     errp_logger = UnifiedEventLogger(log_path, difficulty, mi_mode=mi_controller is not None)
     
-    print(f"\n📊 Logging to: {log_path}")
+    print(f"\nLogging to: {log_path}")
     
-    # Session start
-    push_immediate(MARKER_SESSION)
-    errp_logger.log_event(MARKER_SESSION, "SESSION_START", f"difficulty={difficulty}, trials={total_trials}, mi_mode={mi_controller is not None}")
     
     # First run practice trials if any
     all_trials = practice_trials + total_trials
@@ -449,24 +475,23 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             # Show practice complete message only if there were practice trials
             if practice_trials > 0:
                 show_trial_transition(screen, trial_num, all_trials, difficulty, target_coins, is_practice=False)
-                push_immediate(MARKER_SESSION)
-                errp_logger.log_event(MARKER_SESSION, "MAIN_TRIALS_START", f"practice_complete={practice_trials}")
         
         # Update trial context for logging
         is_practice = trial_num <= practice_trials
         errp_logger.log_trial_start(trial_num, difficulty, is_practice)
         
-        # Run trial with either practice or main error rate
-        trial_error_rate = PRACTICE_ERROR_RATE if is_practice else ERROR_RATE
+        # Trial announcement
         if is_practice:
-            print(f"\n🎮 Practice Trial {trial_num}/{practice_trials} (Error rate: {trial_error_rate:.0%})")
+            print(f"\nPractice Trial {trial_num}/{practice_trials}")
         else:
             main_trial_num = trial_num - practice_trials
-            print(f"\n🎮 Trial {main_trial_num}/{total_trials} (Error rate: {trial_error_rate:.0%})")
+            print(f"\nTrial {main_trial_num}/{total_trials}")
         
         # Get trial parameters
         params = get_difficulty_params(difficulty).copy()
-        params['error_rate'] = trial_error_rate
+        # No error injection - simulator executes commands exactly as received
+        if DEBUG_MODE:
+            print(f"[DEBUG] Phase1 mode - executing commands exactly as received")
         
         # Initialize trial components
         world = World(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -488,7 +513,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
         # Define think time for this trial - fixed 5s for consistent EEG epochs
         think_time = 5.0  # Fixed 5s window for all cues
         
-        # Trial start marker
+        # Send initial trial separator before first cue
         push_immediate(MARKER_TRIAL_START)
         
         # Main trial loop
@@ -521,16 +546,12 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                             cue_match = key_name == word_cue.cue_word
                             user_intended = f"MOVE_{key_name}"
                             
-                            # Process action with error injection
-                            if np.random.random() < params['error_rate']:
-                                executed = f"MOVE_{'RIGHT' if key_name == 'LEFT' else 'LEFT'}"
-                                error_injected = True
-                            else:
-                                executed = user_intended
-                                error_injected = False
+                            # Execute exactly as intended - no error injection
+                            executed = user_intended
+                            error_injected = False
                             
-                            # Send response marker
-                            if error_injected:
+                            # Send response marker based on whether action matches cue
+                            if not cue_match:
                                 push_immediate(MARKER_RESPONSE_ERROR)
                             else:
                                 push_immediate(MARKER_RESPONSE_CORRECT)
@@ -561,13 +582,15 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                                     movement_required = "RIGHT"
                             
                             # Log action
+                            # No MI confidence for keyboard
                             errp_logger.log_action(user_intended, executed, agent.get_world_position(), 
-                                                 agent.coins_collected, movement_required)
+                                                 agent.coins_collected, movement_required, confidence=1.0)
                             
                             # Clear cue
                             word_cue.active = False
-                            push_immediate(MARKER_CUE_END)
-                            push_immediate(MARKER_CUE_END)
+                            
+                            # Send trial separator after action
+                            push_immediate(MARKER_TRIAL_START)
                             
                             action_count += 1
                             cue_cooldown = 60
@@ -589,25 +612,36 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                     key_name = "LEFT" if control_action == pygame.K_LEFT else "RIGHT"
                     user_intended = f"MOVE_{key_name}"
                     
-                    # Process action with error injection
-                    if np.random.random() < params['error_rate']:
-                        executed = f"MOVE_{'RIGHT' if key_name == 'LEFT' else 'LEFT'}"
-                        error_injected = True
-                    else:
-                        executed = user_intended
-                        error_injected = False
+                    # Execute command exactly as received - no error injection
+                    print(f"[ACTION] Processing command: {key_name}")
+                    executed = user_intended
+                    error_injected = False
+                    if DEBUG_MODE:
+                        print(f"[DEBUG] Executing command exactly as received: {executed}")
                     
-                    # Send response marker
-                    if error_injected:
+                    # Send response marker based on whether action matches cue
+                    cue_match = key_name == word_cue.cue_word
+                    if not cue_match:
                         push_immediate(MARKER_RESPONSE_ERROR)
                     else:
                         push_immediate(MARKER_RESPONSE_CORRECT)
                     
                     # Execute movement
                     if executed == "MOVE_LEFT":
-                        agent.move_left()
+                        success = agent.move_left()
+                        print(f"[MOVE] LEFT command - success: {success}, position: {agent.get_world_position()}")
+                        if DEBUG_MODE:
+                            print(f"[DEBUG] World shifting: {agent.world.shifting}")
                     elif executed == "MOVE_RIGHT":
-                        agent.move_right()
+                        success = agent.move_right()
+                        print(f"[MOVE] RIGHT command - success: {success}, position: {agent.get_world_position()}")
+                        if DEBUG_MODE:
+                            print(f"[DEBUG] World shifting: {agent.world.shifting}")
+                    
+                    # Get confidence from MI controller
+                    mi_confidence = 0.0
+                    if mi_controller and hasattr(mi_controller, 'last_prediction') and mi_controller.last_prediction:
+                        mi_confidence = mi_controller.last_prediction.get('confidence', 0.0)
                     
                     # Track action info
                     last_action_info = {
@@ -617,7 +651,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                         'error_injected': error_injected,
                         'user_intent_followed': not error_injected,
                         'mi_detected': True,
-                        'confidence': mi_controller.last_prediction.get('confidence', 0) if mi_controller and mi_controller.last_prediction else 0
+                        'confidence': mi_confidence
                     }
                     
                     # Determine movement required
@@ -632,12 +666,13 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                     
                     # Log action
                     errp_logger.log_action(user_intended, executed, agent.get_world_position(), 
-                                         agent.coins_collected, movement_required)
+                                         agent.coins_collected, movement_required, confidence=mi_confidence)
                     
                     # Clear cue
                     word_cue.active = False
-                    push_immediate(MARKER_CUE_END)
-                    push_immediate(MARKER_CUE_END)
+                    
+                    # Send trial separator after action
+                    push_immediate(MARKER_TRIAL_START)
                     
                     # End MI cue
                     if mi_controller and control_interface.mode == 'mock_eeg':
@@ -652,7 +687,8 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             
             # Check for cue timeout
             if cue_ended and action_count == 0:
-                push_immediate(MARKER_NO_RESPONSE)
+                # Timeout - send trial separator
+                push_immediate(MARKER_TRIAL_START)
                 errp_logger.log_cue_timeout(agent.get_world_position(), agent.coins_collected)
                 
                 if mi_controller and control_interface.mode == 'mock_eeg':
@@ -719,8 +755,6 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                             else:
                                 cue_word = random.choice(["LEFT", "RIGHT"])
                             
-                            push_immediate(MARKER_BASELINE)
-                            push_immediate(MARKER_BASELINE)
                             
                             # Adjust slow motion factor based on distance
                             if distance_to_agent < 250:
@@ -749,6 +783,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
                             # Reset control interface for new cue
                             if control_interface and control_interface.mode == 'real_eeg':
                                 control_interface.reset_for_new_cue()
+                                print(f"[DEBUG] Reset control interface for new cue")
                             
                             # Start MI cue if using MI control
                             if mi_controller and control_interface.mode == 'mock_eeg':
@@ -777,7 +812,6 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             # Check trial completion
             if agent.coins_collected >= params['target_coins']:
                 completion_start = time.perf_counter()
-                push_immediate(MARKER_TRIAL_START)
                 errp_logger.log_trial_complete(agent.coins_collected)
                 show_trial_complete(screen, agent, params['target_coins'])
                 trial_running = False
@@ -837,7 +871,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
     print(f"Difficulty: {difficulty}")
     
     if timing_stats:
-        print(f"\n📊 Timing Precision Statistics:")
+        print(f"\nTiming Precision Statistics:")
         print(f"  Mean frame interval: {timing_stats['mean_ms']:.2f}ms")
         print(f"  Std deviation: {timing_stats['std_ms']:.2f}ms")
         print(f"  Max frame interval: {timing_stats['max_ms']:.2f}ms")

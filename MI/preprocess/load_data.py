@@ -42,12 +42,118 @@ class MIDataLoader:
         data_dict = {}
         
         # Load all CSV files in the session
-        for csv_file in sorted(session_path.glob("test-*.csv")):
+        # First try test-*.csv pattern (original format)
+        csv_files = list(session_path.glob("test-*.csv"))
+        
+        # If no test-*.csv files, try data_*.csv pattern (OpenViBE export)
+        if not csv_files:
+            csv_files = list(session_path.glob("data_*.csv"))
+            
+        # If still no files, try any CSV file
+        if not csv_files:
+            csv_files = list(session_path.glob("*.csv"))
+            # Exclude event log files
+            csv_files = [f for f in csv_files if 'event' not in f.name.lower() and 'errp' not in f.name.lower()]
+        
+        for csv_file in sorted(csv_files):
             print(f"Loading {csv_file.name}...")
             df = pd.read_csv(csv_file)
+            
+            # Check if this is OpenViBE format with Oscillator columns
+            if 'Oscillator 1' in df.columns:
+                # Rename columns to match expected format
+                oscillator_cols = [col for col in df.columns if col.startswith('Oscillator')]
+                channel_mapping = {f'Oscillator {i}': f'Channel {i}' for i in range(1, len(oscillator_cols)+1)}
+                df = df.rename(columns=channel_mapping)
+                self.channel_names = [f"Channel {i}" for i in range(1, len(oscillator_cols)+1)]
+            
+            # Look for separate event log file
+            event_log = None
+            possible_event_files = [
+                session_path / f"subway_errp_*.csv",
+                session_path / f"phase1_events_*.csv",
+                session_path / f"event_log.csv"
+            ]
+            
+            for pattern in possible_event_files:
+                if isinstance(pattern, Path) and pattern.exists():
+                    event_log = pattern
+                    break
+                else:
+                    matching_files = list(session_path.glob(pattern.name))
+                    if matching_files:
+                        event_log = matching_files[0]
+                        break
+            
+            if event_log and event_log.exists():
+                print(f"  Found event log: {event_log.name}")
+                df = self._merge_events(df, event_log)
+            
             data_dict[csv_file.stem] = df
             
         return data_dict
+    
+    def _merge_events(self, eeg_df: pd.DataFrame, event_log_path: Path) -> pd.DataFrame:
+        """
+        Merge event markers from separate log file into EEG data
+        
+        Args:
+            eeg_df: DataFrame with EEG data
+            event_log_path: Path to event log CSV file
+            
+        Returns:
+            DataFrame with Event Id column populated
+        """
+        # Load event log
+        event_df = pd.read_csv(event_log_path)
+        
+        # Ensure Event Id column exists
+        if 'Event Id' not in eeg_df.columns:
+            eeg_df['Event Id'] = 0
+        else:
+            # Clear existing events
+            eeg_df['Event Id'] = 0
+            
+        # Convert event timestamps to sample indices
+        for _, event in event_df.iterrows():
+            # Get event info
+            timestamp = event['timestamp']
+            event_type = event['event']
+            
+            # Skip non-cue events for MI analysis (we only need cues)
+            # 2 = LEFT cue, 3 = RIGHT cue
+            if event_type not in [2, 3]:
+                continue
+                
+            # Find closest sample to timestamp
+            # Assuming Time column exists or calculate from index
+            if 'Time:512Hz' in eeg_df.columns:
+                # OpenViBE format with time column
+                time_col = 'Time:512Hz'
+                sample_idx = (eeg_df[time_col] - timestamp).abs().idxmin()
+            else:
+                # Calculate from sampling rate
+                sample_idx = int(timestamp * self.sampling_rate)
+                if sample_idx >= len(eeg_df):
+                    print(f"  Warning: Event at {timestamp}s is beyond data length")
+                    continue
+            
+            # Set event marker
+            eeg_df.loc[sample_idx, 'Event Id'] = event_type
+            
+            # Also get ground truth if available
+            if 'gt' in event.index and pd.notna(event['gt']):
+                # Map gt (0=left, 1=right) to event type (2=left, 3=right)
+                gt_value = int(event['gt'])
+                expected_event = 2 if gt_value == 0 else 3
+                if event_type != expected_event:
+                    print(f"  Warning: Event type {event_type} doesn't match GT {gt_value}")
+        
+        # Report merged events
+        merged_events = eeg_df[eeg_df['Event Id'] != 0]
+        print(f"  Merged {len(merged_events)} MI cue events into EEG data")
+        
+        return eeg_df
     
     def extract_trials(self, df: pd.DataFrame) -> List[Dict]:
         """
@@ -65,9 +171,20 @@ class MIDataLoader:
         events = df[df['Event Id'].notna()].copy()
         events = events[events['Event Id'] != 0]  # Exclude rest markers
         
+        # For phase1 data, we use markers 2 (LEFT) and 3 (RIGHT)
+        # Map them to labels: LEFT=1, RIGHT=2 (matching the original label scheme)
+        event_label_map = {2: 1, 3: 2}  # 2->1 (LEFT), 3->2 (RIGHT)
+        
         # Extract trials around each event
         for idx, event in events.iterrows():
             event_id = int(event['Event Id'])
+            
+            # Map event ID to label if needed
+            if event_id in event_label_map:
+                label = event_label_map[event_id]
+            else:
+                # Keep original label for backward compatibility
+                label = event_id
             
             # Define trial window: -1s to +4s around event
             pre_samples = int(1 * self.sampling_rate)  # 1 second before
@@ -82,7 +199,7 @@ class MIDataLoader:
             # Store trial info
             trial = {
                 'data': trial_data,
-                'label': event_id,
+                'label': label,  # Use mapped label
                 'event_sample': idx,
                 'start_sample': start_idx,
                 'end_sample': end_idx,
