@@ -16,7 +16,7 @@ Usage:
 
 import sys
 import os
-from pylsl import StreamInlet, resolve_streams, StreamInfo, StreamOutlet
+from pylsl import StreamInlet, resolve_streams, StreamInfo, StreamOutlet, local_clock
 # Import the original simulator components
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from run_simulation_2 import *  # Import everything from original (including hand images)
@@ -90,8 +90,8 @@ class UnifiedEventLogger:
         # Write header - event_type is now numeric
         with open(filepath, 'w', newline='') as f:
             writer = csv.writer(f)
-            # New format: timestamp, relative_time, trial, event, classifier_out, confidence, gt
-            writer.writerow(['timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
+            # New format: timestamp, lsl_timestamp, relative_time, trial, event, classifier_out, confidence, gt
+            writer.writerow(['timestamp', 'lsl_timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
     
     def _add_event(self, timestamp, event_type, event_name='', trial_id='', cue_class='', 
                    predicted_class='', accuracy='', error_type='', confidence='',
@@ -121,8 +121,12 @@ class UnifiedEventLogger:
         elif event_type in [MARKER_RESPONSE_CORRECT, MARKER_RESPONSE_ERROR]:
             gt = self.current_gt if self.current_gt else ''
         
+        # Get LSL timestamp for alignment
+        lsl_time = local_clock()
+        
         event = {
             'timestamp': f"{timestamp:.3f}",
+            'lsl_timestamp': f"{lsl_time:.6f}",
             'rel_time': rel_time,
             'trial': trial_id,
             'event': str(event_type),
@@ -272,7 +276,7 @@ class UnifiedEventLogger:
     def _write_event(self, event):
         """Write event to CSV"""
         with open(self.filepath, 'a', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=['timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
+            writer = csv.DictWriter(f, fieldnames=['timestamp', 'lsl_timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
             writer.writerow(event)
 
 

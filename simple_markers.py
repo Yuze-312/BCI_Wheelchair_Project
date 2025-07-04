@@ -18,6 +18,12 @@ MARKER_NO_RESPONSE = 7       # Timeout
 MARKER_BASELINE = 8          # Baseline period
 MARKER_SESSION = 9           # Session start/end
 
+# Manipulation markers (10-13) for enhanced real-time mode
+MARKER_NATURAL_CORRECT = 10  # Classifier correct, kept as is
+MARKER_FORCED_CORRECT = 11   # Classifier wrong, forced to GT
+MARKER_NATURAL_ERROR = 12    # Classifier wrong, kept as error
+MARKER_FORCED_ERROR = 13     # Classifier correct, forced to error
+
 # Human-readable names for logging
 MARKER_NAMES = {
     1: "TRIAL_START",
@@ -28,7 +34,11 @@ MARKER_NAMES = {
     6: "RESPONSE_ERROR",
     7: "NO_RESPONSE",
     8: "BASELINE",
-    9: "SESSION"
+    9: "SESSION",
+    10: "NATURAL_CORRECT",
+    11: "FORCED_CORRECT",
+    12: "NATURAL_ERROR",
+    13: "FORCED_ERROR"
 }
 
 # Common marker combinations for analysis

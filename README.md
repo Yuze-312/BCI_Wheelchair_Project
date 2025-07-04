@@ -16,17 +16,20 @@ Key Files Summary:
   - Trained MI model in MI/models/22
 
 
-
-  python simulation/eeg_model_integration_v2.py --phase phase1 --participant T-001
+  Run the phase1 data collection, the classifier would run as gt.
+  - python simulation/eeg_model_integration_v2.py --phase phase1 --participant T-001
 
   pre-training event logger is saved in BCI_Wheelchair_Project\pre_training_event_log, we need to merge this to the session folder(EEG_data\T-001\Session 1).
 
   process new participant:
-  python MI\process_new_participant.py --participant T-001 --base-path C:\Users\yuzeb\EEG_data --sessions Session 1
+  - python MI\process_new_participant.py --participant T-001 --base-path C:\Users\yuzeb\EEG_data --sessions Session 1
 
   Training:
-  python MI\classifiers\subject_specific\train_subject_classifier.py --participant T-001
+  - python MI\classifiers\subject_specific\train_subject_classifier.py --participant T-001
 
 
   Real time deploy:
-  python simulation/eeg_model_integration_v2.py --participant T-001
+  -  python simulation/eeg_model_integration_v2.py --participant T-001
+
+  We can set the manipulation rate when running the integration file:
+  -  python simulation/eeg_model_integration_v2.py --manipulation-rate 0.75 --participant T-001

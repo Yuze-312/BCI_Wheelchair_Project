@@ -184,12 +184,28 @@ class VotingController:
                     # Classifier was already wrong
                     manipulation_type = 12  # MARKER_NATURAL_ERROR
             
-            # Log manipulation details
-            print(f"\n[MANIPULATION] Target rate: {self.manipulation_rate:.0%}")
-            print(f"   Original: {original_class or 'None'} (conf: {original_conf:.2f})")
-            print(f"   Ground truth: {cue_type}")
-            print(f"   Final action: {final_class}")
-            print(f"   Type: {manipulation_type} ({['','','','','','','','','','','NATURAL_CORRECT','FORCED_CORRECT','NATURAL_ERROR','FORCED_ERROR'][manipulation_type-1] if manipulation_type else 'None'})")
+            # Enhanced manipulation logging
+            print(f"\n{'='*60}")
+            print(f"[MANIPULATION ACTIVE] Success Rate Target: {self.manipulation_rate:.0%}")
+            print(f"{'='*60}")
+            print(f"  Ground Truth (Cue): {cue_type.upper()}")
+            print(f"  Classifier Output:  {(original_class or 'None').upper()} (conf: {original_conf:.2f})")
+            print(f"  Executed Action:    {final_class.upper()}")
+            
+            manipulation_names = {
+                10: 'NATURAL_CORRECT (classifier correct, kept)',
+                11: 'FORCED_CORRECT (classifier wrong → corrected)',
+                12: 'NATURAL_ERROR (classifier wrong, kept)', 
+                13: 'FORCED_ERROR (classifier correct → flipped)'
+            }
+            print(f"  Manipulation Type:  {manipulation_names.get(manipulation_type, 'Unknown')}")
+            
+            # Show impact
+            if manipulation_type in [11, 13]:
+                print(f"  >>> ACTION MODIFIED: {(original_class or 'None').upper()} → {final_class.upper()}")
+            else:
+                print(f"  >>> ACTION UNCHANGED: {final_class.upper()}")
+            print(f"{'='*60}")
         
         # Send final decision
         if final_class:

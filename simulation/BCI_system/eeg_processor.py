@@ -96,6 +96,17 @@ class EEGProcessor:
             print(f"\nEEG Processing with Pretrained Model [Continuous Mode]")
             print(f"Confidence threshold: {self.classifier.confidence_threshold}")
             print(f"Processing continuously, enhanced during cues")
+            
+            # Show manipulation status
+            if self.manipulation_rate > 0:
+                print(f"\n{'='*60}")
+                print(f"[ErrP ELICITATION MODE ACTIVE]")
+                print(f"Manipulation Rate: {self.manipulation_rate:.0%} success rate")
+                print(f"Expected Error Rate: {(1-self.manipulation_rate)*100:.0f}%")
+                print(f"Purpose: Controlled ErrP elicitation for adaptive learning")
+                print(f"{'='*60}\n")
+            else:
+                print(f"\n[Standard Mode] No manipulation - using raw classifier output\n")
         
         print("Press Ctrl+C to stop\n")
         
@@ -232,15 +243,14 @@ class EEGProcessor:
                     print(f"   [SAFETY] Command blocked - voting/cue active")
                     return
                 
-                # Write command
-                self.command_writer.write_command(mi_class)
-                print(f"   [CONTINUOUS] Command written (no cue active)")
-                
-                # Update stats
-                self.voting_controller.detection_stats[mi_class] += 1
-                stats = self.command_writer.get_stats()
-                print(f"[{time.strftime('%H:%M:%S')}] MI: {mi_class.upper()} (conf: {confidence:.2f})")
-                print(f"  Commands: L:{stats['left']} R:{stats['right']}")
+                # During real-time continuous mode, we detect but don't send commands
+                # Commands are only sent during voting windows
+                if self.debug_mode:
+                    print(f"[{time.strftime('%H:%M:%S')}] [CONTINUOUS] MI detected: {mi_class.upper()} (conf: {confidence:.2f})")
+                    print(f"   Note: Commands only sent during voting windows")
+                else:
+                    # Minimal logging for continuous detections
+                    print(f"[CONTINUOUS] {mi_class.upper()} detected (conf: {confidence:.2f})")
                 
                 self.last_detection = current_time
     

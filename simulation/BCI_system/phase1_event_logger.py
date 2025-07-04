@@ -6,6 +6,12 @@ import os
 import csv
 import time
 from datetime import datetime
+try:
+    from pylsl import local_clock
+    HAS_LSL = True
+except ImportError:
+    HAS_LSL = False
+    print("[Phase1EventLogger] Warning: pylsl not available, using system time only")
 
 
 class Phase1EventLogger:
@@ -50,12 +56,17 @@ class Phase1EventLogger:
         
         with open(self.log_filename, 'w', newline='') as f:
             writer = csv.writer(f)
-            # Exact same headers as subway_errp logs
-            writer.writerow(['timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
+            # Enhanced headers with LSL timestamp for alignment
+            if HAS_LSL:
+                writer.writerow(['timestamp', 'lsl_timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
+            else:
+                writer.writerow(['timestamp', 'rel_time', 'trial', 'event', 'classifier_out', 'confidence', 'gt'])
         
         print(f"\n[PHASE1] Event logger initialized:")
         print(f"  Participant: {self.participant_id}")
         print(f"  Log file: {self.log_filename}")
+        if HAS_LSL:
+            print(f"  Using LSL timestamps for EEG alignment")
     
     def log_trial_start(self):
         """Log trial start marker (event=1)"""
@@ -151,15 +162,28 @@ class Phase1EventLogger:
         """Write event to CSV file"""
         with open(self.log_filename, 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([
-                f"{timestamp:.3f}",
-                rel_time,
-                trial,
-                event,
-                classifier_out,
-                confidence,
-                gt
-            ])
+            if HAS_LSL:
+                lsl_time = local_clock()
+                writer.writerow([
+                    f"{timestamp:.3f}",
+                    f"{lsl_time:.6f}",  # Higher precision for LSL
+                    rel_time,
+                    trial,
+                    event,
+                    classifier_out,
+                    confidence,
+                    gt
+                ])
+            else:
+                writer.writerow([
+                    f"{timestamp:.3f}",
+                    rel_time,
+                    trial,
+                    event,
+                    classifier_out,
+                    confidence,
+                    gt
+                ])
     
     def get_log_info(self):
         """Get information about current log"""

@@ -84,7 +84,7 @@ class CommandWriter:
             bool: True if command was written
         """
         if self.command_sent_for_current_cue:
-            print("WARNING: Command already sent for this cue - ignoring")
+            # Silently ignore duplicate commands for the same cue
             return False
         
         command = '1' if mi_class == 'left' else '2'

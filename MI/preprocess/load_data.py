@@ -114,7 +114,23 @@ class MIDataLoader:
             # Clear existing events
             eeg_df['Event Id'] = 0
             
+        # Find the time offset between event log and EEG data
+        # The first event timestamp corresponds to some point in the EEG recording
+        first_event_time = event_df['timestamp'].min()
+        
+        # Calculate when the EEG recording started relative to first event
+        # We know EEG starts at t=0, and we need to find when first event occurred
+        eeg_duration = len(eeg_df) / self.sampling_rate
+        experiment_duration = event_df['timestamp'].max() - first_event_time
+        
+        # EEG recording typically starts before the experiment
+        # Calculate the offset: how many seconds into EEG recording the first event occurred
+        eeg_start_offset = eeg_duration - experiment_duration if eeg_duration > experiment_duration else 0
+        
+        print(f"  Time alignment: EEG started {eeg_start_offset:.1f}s before first event")
+        
         # Convert event timestamps to sample indices
+        events_merged = 0
         for _, event in event_df.iterrows():
             # Get event info
             timestamp = event['timestamp']
@@ -125,21 +141,20 @@ class MIDataLoader:
             if event_type not in [2, 3]:
                 continue
                 
-            # Find closest sample to timestamp
-            # Assuming Time column exists or calculate from index
-            if 'Time:512Hz' in eeg_df.columns:
-                # OpenViBE format with time column
-                time_col = 'Time:512Hz'
-                sample_idx = (eeg_df[time_col] - timestamp).abs().idxmin()
-            else:
-                # Calculate from sampling rate
-                sample_idx = int(timestamp * self.sampling_rate)
-                if sample_idx >= len(eeg_df):
-                    print(f"  Warning: Event at {timestamp}s is beyond data length")
-                    continue
+            # Calculate relative time from start of EEG recording
+            relative_time = (timestamp - first_event_time) + eeg_start_offset
+            
+            # Convert to sample index
+            sample_idx = int(relative_time * self.sampling_rate)
+            
+            # Validate sample index
+            if sample_idx < 0 or sample_idx >= len(eeg_df):
+                print(f"  Warning: Event at relative time {relative_time:.2f}s (sample {sample_idx}) is out of bounds")
+                continue
             
             # Set event marker
             eeg_df.loc[sample_idx, 'Event Id'] = event_type
+            events_merged += 1
             
             # Also get ground truth if available
             if 'gt' in event.index and pd.notna(event['gt']):
@@ -150,8 +165,7 @@ class MIDataLoader:
                     print(f"  Warning: Event type {event_type} doesn't match GT {gt_value}")
         
         # Report merged events
-        merged_events = eeg_df[eeg_df['Event Id'] != 0]
-        print(f"  Merged {len(merged_events)} MI cue events into EEG data")
+        print(f"  Merged {events_merged} MI cue events into EEG data")
         
         return eeg_df
     
