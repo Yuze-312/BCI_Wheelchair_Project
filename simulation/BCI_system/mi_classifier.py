@@ -241,22 +241,19 @@ class MIClassifier:
             prediction = self.classifier.predict(csp_features)
             probabilities = self.classifier.predict_proba(csp_features)
             
-            # Calculate confidence
-            prob_diff = abs(probabilities[0][0] - probabilities[0][1])
-            feature_magnitude = np.linalg.norm(csp_features)
-            typical_magnitude = 1.0  # Should be calibrated from training data
+            # Calculate confidence using probability margin only
+            # This is more reliable than uncalibrated feature magnitude
+            confidence = abs(probabilities[0][0] - probabilities[0][1])
             
-            # Combine margin and magnitude for confidence
-            confidence = prob_diff * min(1.0, feature_magnitude / typical_magnitude)
-            
-            # Boost confidence (model tends to be conservative)
-            confidence = min(1.0, confidence + 0.3)
+            # Optional: Apply power transform to make confidence more discriminative
+            # confidence = confidence ** 0.5  # Square root makes it less extreme
             
             if self.debug_mode:
                 print(f"\nClassification:")
                 print(f"   Prediction: {prediction[0]} ({'LEFT' if prediction[0] == 0 else 'RIGHT'})")
                 print(f"   Probabilities: LEFT={probabilities[0][0]:.3f}, RIGHT={probabilities[0][1]:.3f}")
                 print(f"   Confidence: {confidence:.3f} (threshold: {self.confidence_threshold})")
+                print(f"   Margin-based confidence (no boost)")
             
             # Return result
             if confidence >= self.confidence_threshold:
