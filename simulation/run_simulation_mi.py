@@ -474,11 +474,13 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             target_coins = {
                 'easy': 3,
                 'medium': 5,
-                'hard': 7
+                'hard': 7,
+                'expert': 10
             }.get(difficulty, 5)
             # Show practice complete message only if there were practice trials
             if practice_trials > 0:
-                show_trial_transition(screen, trial_num, all_trials, difficulty, target_coins, is_practice=False)
+                # For the first main trial, show 1/total_trials
+                show_trial_transition(screen, 1, total_trials, difficulty, target_coins, is_practice=False)
         
         # Update trial context for logging
         is_practice = trial_num <= practice_trials
@@ -490,6 +492,13 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
         else:
             main_trial_num = trial_num - practice_trials
             print(f"\nTrial {main_trial_num}/{total_trials}")
+        
+        # Show trial transition screen for each trial
+        if is_practice:
+            show_trial_transition(screen, trial_num, practice_trials, difficulty, get_difficulty_params(difficulty)['target_coins'], is_practice=True)
+        elif trial_num != practice_trials + 1:  # Don't show again for first main trial (already shown above)
+            main_trial_num = trial_num - practice_trials
+            show_trial_transition(screen, main_trial_num, total_trials, difficulty, get_difficulty_params(difficulty)['target_coins'], is_practice=False)
         
         # Get trial parameters
         params = get_difficulty_params(difficulty).copy()
@@ -803,10 +812,14 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             
             # Draw everything
             draw_endless_world(screen, world, agent, coin_manager.coins, word_cue)
-            # For HUD display, adjust trial numbers if in main trials
-            display_trial = trial_num - practice_trials if in_main_trials else trial_num
-            display_total = total_trials if in_main_trials else practice_trials
-            draw_hud(screen, display_trial, display_total, agent, params['target_coins'], difficulty, last_action_info)
+            # For HUD display, use correct trial numbers
+            if is_practice:
+                # During practice trials, show X/practice_trials
+                draw_hud(screen, trial_num, practice_trials, agent, params['target_coins'], difficulty, last_action_info, is_practice=True)
+            else:
+                # During main trials, show only main trial numbers (not including practice)
+                main_trial_num = trial_num - practice_trials
+                draw_hud(screen, main_trial_num, total_trials, agent, params['target_coins'], difficulty, last_action_info, is_practice=False)
             
             # Draw MI-specific UI elements
             if mi_controller and control_interface.mode == 'mock_eeg':
@@ -817,7 +830,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             if agent.coins_collected >= params['target_coins']:
                 completion_start = time.perf_counter()
                 errp_logger.log_trial_complete(agent.coins_collected)
-                show_trial_complete(screen, agent, params['target_coins'])
+                # Skip trial complete screen - go directly to next trial transition
                 trial_running = False
                 completion_end = time.perf_counter()
                 if DEBUG_MODE:
@@ -833,34 +846,7 @@ def main_with_mi(difficulty, total_trials, practice_trials, mi_controller=None, 
             if actual_fps > 0 and actual_fps < FPS * 0.9:
                 print(f"WARNING: FPS dropped to {actual_fps:.1f}")
         
-        # Inter-trial interval
-        if trial_num < all_trials:
-            iti_start = time.time()
-            
-            if not hasattr(main_with_mi, 'iti_screen'):
-                main_with_mi.iti_screen = pygame.Surface(screen.get_size())
-                main_with_mi.iti_screen.fill(COL['bg'])
-            
-            font = get_font(48)
-            iti_text = font.render("Preparing next trial...", True, COL['txt'])
-            iti_rect = iti_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-            
-            while time.time() - iti_start < ITI:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                        pygame.quit()
-                        exit()
-                
-                screen.blit(main_with_mi.iti_screen, (0, 0))
-                screen.blit(iti_text, iti_rect)
-                
-                remaining = ITI - (time.time() - iti_start)
-                countdown_text = font.render(f"{remaining:.1f}s", True, COL['countdown'])
-                countdown_rect = countdown_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 + 60))
-                screen.blit(countdown_text, countdown_rect)
-                
-                pygame.display.flip()
-                clock.tick(60)
+        # Skip inter-trial interval - go directly to next trial's transition screen
     
     # Experiment complete
     errp_logger.save()

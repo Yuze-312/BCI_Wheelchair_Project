@@ -246,7 +246,7 @@ class MIDataLoader:
                 participant_data['info']['task'] = f.read().strip()
         
         # Load all sessions
-        sessions = ["Session 1", "Session 2", "Test"]
+        sessions = ["Session 1", "Session 2", "Session 3"]
         
         for session in sessions:
             try:

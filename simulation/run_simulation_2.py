@@ -1202,7 +1202,7 @@ def draw_word_cue(screen, word_cue):
         pause_rect = pause_text.get_rect(center=(screen_width // 2, screen_height - 60))
         screen.blit(pause_text, pause_rect)
 
-def draw_hud(screen, trial_num, total_trials, agent, target_coins, difficulty, last_action_info=None):
+def draw_hud(screen, trial_num, total_trials, agent, target_coins, difficulty, last_action_info=None, is_practice=False):
     """Draw the heads-up display with enhanced visibility"""
     font = get_font(36)
     small_font = get_font(28)
@@ -1223,12 +1223,17 @@ def draw_hud(screen, trial_num, total_trials, agent, target_coins, difficulty, l
                     (screen.get_width(), bar_height - 1), 2)
     
     # Trial info with shadow
-    trial_text = f"Trial {trial_num}/{total_trials}"
+    if is_practice:
+        trial_text = f"Practice Trial {trial_num}/{total_trials}"
+        text_color = COL['collected_coin']  # Green for practice
+    else:
+        trial_text = f"Trial {trial_num}/{total_trials}"
+        text_color = COL['txt']
     # Shadow
     trial_shadow = font.render(trial_text, True, (0, 0, 0))
     screen.blit(trial_shadow, (23, 18))
     # Main text
-    trial_surface = font.render(trial_text, True, COL['txt'])
+    trial_surface = font.render(trial_text, True, text_color)
     screen.blit(trial_surface, (20, 15))
     
     # Enhanced difficulty badge
@@ -1236,7 +1241,8 @@ def draw_hud(screen, trial_num, total_trials, agent, target_coins, difficulty, l
     diff_color = {
         'easy': COL['agent'],
         'medium': COL['countdown'],
-        'hard': COL['err']
+        'hard': COL['err'],
+        'expert': COL['coin']
     }.get(difficulty, COL['txt'])
     
     diff_surface = small_font.render(diff_text, True, diff_color)
@@ -1405,15 +1411,16 @@ def select_experiment_settings():
             inst_surface = small_font.render(inst, True, COL['txt'])
             screen.blit(inst_surface, (70, inst_y + 20 + i * 25))
         
-        # Difficulty selection with enhanced visuals
+        # Difficulty and Trials selection with enhanced visuals
         y_offset = 300
-        diff_title = font.render("Select Difficulty:", True, COL['txt'])
+        diff_title = font.render("Select Difficulty and Number of Trials:", True, COL['txt'])
         screen.blit(diff_title, (50, y_offset))
         
         difficulties = [
-            ('1', 'easy', 'Easy', '3 coins, 3-5s think time', COL['agent']),
-            ('2', 'medium', 'Medium', '5 coins, 2-4s think time', COL['countdown']),
-            ('3', 'hard', 'Hard', '7 coins, 1-3s think time', COL['err'])
+            ('1', 'easy', 'Easy', '3 coins', COL['agent']),
+            ('2', 'medium', 'Medium', '5 coins', COL['countdown']),
+            ('3', 'hard', 'Hard', '7 coins', COL['err']),
+            ('4', 'expert', 'Expert', '10 coins', COL['coin'])
         ]
         
         for i, (key, value, name, desc, color) in enumerate(difficulties):
@@ -1438,14 +1445,16 @@ def select_experiment_settings():
             text = small_font.render(f"[{key}] {name}: {desc}", True, text_color)
             screen.blit(text, (80, y_offset + 60 + i * 45))
         
-        # Number of trials with enhanced visuals
-        y_offset = 480
-        trials_title = font.render("Number of Trials:", True, COL['txt'])
-        screen.blit(trials_title, (50, y_offset))
+        # Number of trials section (no separate title needed)
+        y_offset = 500  # Moved up since there's no title
+        
+        # Draw a separator line
+        separator_y = y_offset - 15
+        pygame.draw.line(screen, COL['lane_line'], (70, separator_y), (770, separator_y), 2)
         
         trial_options = [
-            ('Q', 5, 'Quick (5 trials)'),
-            ('M', 10, 'Medium (10 trials)'),
+            ('Q', 5, 'Short (5 trials)'),
+            ('S', 10, 'Standard (10 trials)'),
             ('L', 20, 'Long (20 trials)')
         ]
         
@@ -1508,9 +1517,11 @@ def select_experiment_settings():
                     settings['difficulty'] = 'medium'
                 elif event.key == pygame.K_3:
                     settings['difficulty'] = 'hard'
+                elif event.key == pygame.K_4:
+                    settings['difficulty'] = 'expert'
                 elif event.key == pygame.K_q:
                     settings['trials'] = 5
-                elif event.key == pygame.K_m:
+                elif event.key == pygame.K_s:
                     settings['trials'] = 10
                 elif event.key == pygame.K_l:
                     settings['trials'] = 20
@@ -1524,211 +1535,140 @@ def get_difficulty_params(difficulty):
     params = {
         'easy': {
             'target_coins': 3,
-            'min_think_time': 3.0,
-            'max_think_time': 5.0,
+            'min_think_time': 5.0,  # Fixed think time
+            'max_think_time': 5.0,  # Fixed think time
             'spawn_interval': (120, 180)
         },
         'medium': {
             'target_coins': 5,
-            'min_think_time': 2.0,
-            'max_think_time': 4.0,
+            'min_think_time': 5.0,  # Fixed think time
+            'max_think_time': 5.0,  # Fixed think time
             'spawn_interval': (90, 150)
         },
         'hard': {
             'target_coins': 7,
-            'min_think_time': 1.0,
-            'max_think_time': 3.0,
+            'min_think_time': 5.0,  # Fixed think time
+            'max_think_time': 5.0,  # Fixed think time
             'spawn_interval': (60, 120)
+        },
+        'expert': {
+            'target_coins': 10,
+            'min_think_time': 5.0,  # Fixed think time
+            'max_think_time': 5.0,  # Fixed think time
+            'spawn_interval': (45, 90)  # Faster spawn rate for expert
         }
     }
     return params[difficulty]
 
 def show_trial_transition(screen, trial_num, total_trials, difficulty, target_coins, is_practice=False):
-    """Show transition screen between trials with enhanced visuals"""
-    font = get_font(56)
+    """Show transition between trials - detailed for practice, simple for main"""
+    font = get_font(48)
     small_font = get_font(36)
+    tiny_font = get_font(28)
     
-    screen.fill(COL['bg'])
-    
-    # Draw animated background lanes with parallax effect
-    lane_width = 200
-    for i in range(5):
-        x = i * lane_width - 100 + int(20 * math.sin(pygame.time.get_ticks() * 0.001 + i))
-        color = COL['lane'] if i % 2 == 0 else COL['lane_alt']
-        
-        # Add gradient to lanes
-        lane_surface = pygame.Surface((lane_width, screen.get_height()), pygame.SRCALPHA)
-        for y in range(0, screen.get_height(), 20):
-            fade = 1.0 - (y / screen.get_height()) * 0.3
-            lane_color = tuple(int(c * fade) for c in color)
-            pygame.draw.rect(lane_surface, (*lane_color, 200), (0, y, lane_width, 20))
-        screen.blit(lane_surface, (x, 0))
-    
-    # Dark overlay with gradient
-    overlay = pygame.Surface(screen.get_size())
-    overlay.set_alpha(180)
-    overlay.fill((0, 0, 0))
-    screen.blit(overlay, (0, 0))
-    
-    # Animated particles in background
-    for i in range(20):
-        particle_y = (pygame.time.get_ticks() * 0.1 + i * 50) % screen.get_height()
-        particle_x = 100 + i * 60
-        particle_alpha = int(100 * abs(math.sin(i + pygame.time.get_ticks() * 0.001)))
-        pygame.draw.circle(screen, (*COL['lane_line'], particle_alpha), 
-                         (int(particle_x), int(particle_y)), 2)
-    
-    # Trial info box with enhanced styling
-    box_width, box_height = 600, 400
-    box_x = screen.get_width() // 2 - box_width // 2
-    box_y = screen.get_height() // 2 - box_height // 2
-    
-    # Box shadow
-    shadow_surface = pygame.Surface((box_width + 20, box_height + 20), pygame.SRCALPHA)
-    pygame.draw.rect(shadow_surface, (0, 0, 0, 100), (0, 0, box_width + 20, box_height + 20), 
-                    border_radius=25)
-    screen.blit(shadow_surface, (box_x - 10, box_y - 10))
-    
-    # Box background with gradient
-    box_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
-    for y in range(box_height):
-        fade = 1.0 - (y / box_height) * 0.2
-        color = tuple(int(c * fade) for c in COL['cue_bg'])
-        pygame.draw.rect(box_surface, (*color, 240), (0, y, box_width, 1))
-    screen.blit(box_surface, (box_x, box_y))
-    
-    # Box border with glow
-    for i in range(3):
-        glow_alpha = 150 - i * 40
-        pygame.draw.rect(screen, (*COL['lane_line'], glow_alpha), 
-                        (box_x - i*2, box_y - i*2, box_width + i*4, box_height + i*4), 
-                        2, border_radius=20)
-    
-    # Content
-    y = box_y + 50
-    
-    # Trial number with shadow effect
-    if is_practice:
-        text = f"PRACTICE {trial_num}/{total_trials}"
-        text_color = COL['collected_coin']  # Green for practice
-    else:
-        text = f"Trial {trial_num}/{total_trials}"
-        text_color = COL['txt']
-    
-    trial_text = font.render(text, True, text_color)
-    trial_shadow = font.render(text, True, (0, 0, 0))
-    trial_rect = trial_text.get_rect(center=(screen.get_width() // 2, y))
-    shadow_rect = trial_shadow.get_rect(center=(screen.get_width() // 2 + 3, y + 3))
-    screen.blit(trial_shadow, shadow_rect)
-    screen.blit(trial_text, trial_rect)
-    
-    # Goal with coin icon
-    y += 80
-    # Draw coin icon
-    coin_x = screen.get_width() // 2 - 100
-    pygame.draw.circle(screen, COL['coin'], (coin_x, y), 20)
-    pygame.draw.circle(screen, (255, 200, 0), (coin_x, y), 17)
-    pygame.draw.circle(screen, (255, 240, 100), (coin_x - 7, y - 7), 7)
-    
-    goal_text = small_font.render(f"Collect {target_coins} coins", True, COL['coin'])
-    goal_rect = goal_text.get_rect(center=(screen.get_width() // 2 + 20, y))
-    screen.blit(goal_text, goal_rect)
-    
-    # Instructions with cleaner design
-    y += 60
-    
-    # "Watch for word cues" header
-    header_text = small_font.render("Watch for word cues:", True, COL['txt'])
-    header_rect = header_text.get_rect(center=(screen.get_width() // 2, y))
-    screen.blit(header_text, header_rect)
-    
-    # Word cue examples with better spacing
-    y += 40
-    arrow_offset = int(10 * math.sin(pygame.time.get_ticks() * 0.003))
-    
-    # LEFT cue with arrow
-    left_group_x = screen.get_width() // 2 - 100
-    # Draw arrow first (to the left of text)
-    arrow_x = left_group_x - 60 + arrow_offset
-    pygame.draw.polygon(screen, COL['cue_left'], [
-        (arrow_x, y),
-        (arrow_x + 15, y - 8),
-        (arrow_x + 15, y + 8)
-    ])
-    # Then text
-    left_text = small_font.render("LEFT", True, COL['cue_left'])
-    left_rect = left_text.get_rect(center=(left_group_x, y))
-    screen.blit(left_text, left_rect)
-    
-    # "or" text in the middle
-    or_text = small_font.render("or", True, COL['txt'])
-    or_rect = or_text.get_rect(center=(screen.get_width() // 2, y))
-    screen.blit(or_text, or_rect)
-    
-    # RIGHT cue with arrow
-    right_group_x = screen.get_width() // 2 + 100
-    # Draw text first
-    right_text = small_font.render("RIGHT", True, COL['cue_right'])
-    right_rect = right_text.get_rect(center=(right_group_x, y))
-    screen.blit(right_text, right_rect)
-    # Then arrow (to the right of text)
-    arrow_x = right_group_x + 60 - arrow_offset
-    pygame.draw.polygon(screen, COL['cue_right'], [
-        (arrow_x, y),
-        (arrow_x - 15, y - 8),
-        (arrow_x - 15, y + 8)
-    ])
-    
-    # "Imagine the movement!" instruction
-    y += 40
-    imagine_text = small_font.render("Imagine the movement!", True, COL['txt'])
-    imagine_rect = imagine_text.get_rect(center=(screen.get_width() // 2, y))
-    screen.blit(imagine_text, imagine_rect)
-    
-    # Start prompt with enhanced animation
-    start_text = font.render("Press SPACE to start", True, COL['agent'])
-    start_rect = start_text.get_rect(center=(screen.get_width() // 2, box_y + box_height - 60))
-    
-    # Multi-layer pulsing effect
-    pulse = abs(math.sin(pygame.time.get_ticks() * 0.003))
-    
-    # Outer glow
-    for i in range(4):
-        glow_alpha = int((80 - i * 15) * pulse)
-        glow_surface = pygame.Surface((start_rect.width + 60 + i*20, start_rect.height + 30 + i*10))
-        glow_surface.set_alpha(glow_alpha)
-        glow_surface.fill(COL['agent'])
-        screen.blit(glow_surface, (start_rect.x - 30 - i*10, start_rect.y - 15 - i*5))
-    
-    # Button background
-    button_rect = start_rect.inflate(60, 30)
-    pygame.draw.rect(screen, COL['agent'], button_rect, border_radius=20)
-    
-    # Inner highlight
-    highlight_rect = button_rect.inflate(-20, -10)
-    pygame.draw.rect(screen, tuple(min(255, int(c * 1.3)) for c in COL['agent']), 
-                    highlight_rect, 2, border_radius=15)
-    
-    # Text shadow
-    shadow_text = font.render("Press SPACE to start", True, (0, 0, 0))
-    shadow_rect = shadow_text.get_rect(center=(screen.get_width() // 2 + 2, box_y + box_height - 58))
-    screen.blit(shadow_text, shadow_rect)
-    
-    screen.blit(start_text, start_rect)
-    
-    pygame.display.flip()
-    
-    # Wait for space (with proper timing)
     clock = pygame.time.Clock()
+    start_time = pygame.time.get_ticks()
+    rest_duration = 2.0  # 2 seconds
+    
     while True:
+        # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
                 exit()
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                return
         
-        # Maintain frame rate during wait
+        # Calculate remaining time
+        elapsed = (pygame.time.get_ticks() - start_time) / 1000.0
+        if elapsed >= rest_duration:
+            return
+        
+        remaining = rest_duration - elapsed
+        
+        # Clear screen
+        screen.fill(COL['bg'])
+        
+        # Draw simple background lanes
+        lane_width = screen.get_width() // 5
+        for i in range(5):
+            x = i * lane_width
+            color = COL['lane'] if i % 2 == 0 else COL['lane_alt']
+            pygame.draw.rect(screen, color, (x, 0, lane_width, screen.get_height()))
+        
+        # Dark overlay
+        overlay = pygame.Surface(screen.get_size())
+        overlay.set_alpha(200)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+        
+        # Detailed instructions for all trials
+        # Trial info - different text and color for practice vs main
+        if is_practice:
+            trial_text = f"Practice Trial {trial_num}/{total_trials}"
+            text_color = COL['collected_coin']
+        else:
+            trial_text = f"Trial {trial_num}/{total_trials}"
+            text_color = COL['txt']
+        
+        trial_surface = font.render(trial_text, True, text_color)
+        trial_rect = trial_surface.get_rect(center=(screen.get_width() // 2, 150))
+        screen.blit(trial_surface, trial_rect)
+        
+        # Goal
+        goal_text = small_font.render(f"Goal: Collect {target_coins} coins", True, COL['coin'])
+        goal_rect = goal_text.get_rect(center=(screen.get_width() // 2, 220))
+        screen.blit(goal_text, goal_rect)
+        
+        # Instructions
+        y_pos = 300
+        instruction_text = small_font.render("Watch for word cues:", True, COL['txt'])
+        instruction_rect = instruction_text.get_rect(center=(screen.get_width() // 2, y_pos))
+        screen.blit(instruction_text, instruction_rect)
+        
+        # LEFT cue example
+        y_pos += 60
+        arrow_offset = int(10 * math.sin(pygame.time.get_ticks() * 0.003))
+        
+        # LEFT arrow and text
+        left_x = screen.get_width() // 2 - 100
+        arrow_x = left_x - 60 + arrow_offset
+        pygame.draw.polygon(screen, COL['cue_left'], [
+            (arrow_x, y_pos),
+            (arrow_x + 15, y_pos - 8),
+            (arrow_x + 15, y_pos + 8)
+        ])
+        left_text = small_font.render("LEFT", True, COL['cue_left'])
+        left_rect = left_text.get_rect(center=(left_x, y_pos))
+        screen.blit(left_text, left_rect)
+        
+        # "or" in middle
+        or_text = small_font.render("or", True, COL['txt'])
+        or_rect = or_text.get_rect(center=(screen.get_width() // 2, y_pos))
+        screen.blit(or_text, or_rect)
+        
+        # RIGHT arrow and text
+        right_x = screen.get_width() // 2 + 100
+        right_text = small_font.render("RIGHT", True, COL['cue_right'])
+        right_rect = right_text.get_rect(center=(right_x, y_pos))
+        screen.blit(right_text, right_rect)
+        arrow_x = right_x + 60 - arrow_offset
+        pygame.draw.polygon(screen, COL['cue_right'], [
+            (arrow_x, y_pos),
+            (arrow_x - 15, y_pos - 8),
+            (arrow_x - 15, y_pos + 8)
+        ])
+        
+        # Imagine instruction
+        y_pos += 60
+        imagine_text = tiny_font.render("Imagine the movement when you see the cue!", True, COL['txt'])
+        imagine_rect = imagine_text.get_rect(center=(screen.get_width() // 2, y_pos))
+        screen.blit(imagine_text, imagine_rect)
+        
+        # Countdown at bottom
+        countdown_text = small_font.render(f"Starting in {remaining:.1f}s", True, COL['txt'])
+        countdown_rect = countdown_text.get_rect(center=(screen.get_width() // 2, screen.get_height() - 150))
+        screen.blit(countdown_text, countdown_rect)
+        
+        pygame.display.flip()
         clock.tick(60)
 
 def show_trial_complete(screen, agent, target_coins):
@@ -2235,7 +2175,11 @@ def main():
     errp_logger = OptimizedEventLogger(LOG_PATH)
     
     # Add practice trials to the beginning
-    practice_trials = settings.get('practice', PRACTICE_TRIALS)
+    # For quick mode (5 trials), skip practice trials
+    if total_trials == 5:
+        practice_trials = 0
+    else:
+        practice_trials = settings.get('practice', PRACTICE_TRIALS)
     all_trials = []
     
     # Add practice trials
@@ -2247,13 +2191,17 @@ def main():
         all_trials.append(('main', i + 1))
     
     # Run all trials
-    for trial_type, trial_num in all_trials:
+    for trial_idx, (trial_type, trial_num) in enumerate(all_trials):
         trial_setup_start = time.perf_counter()
+        
+        # Calculate actual trial number for display (1-based index)
+        actual_trial_num = trial_idx + 1
         
         # Show transition screen
         if trial_type == 'practice':
             show_trial_transition(screen, trial_num, practice_trials, difficulty, params['target_coins'], is_practice=True)
         else:
+            # For main trials, show only main trial numbers (not including practice)
             show_trial_transition(screen, trial_num, total_trials, difficulty, params['target_coins'])
         
         transition_end = time.perf_counter()
@@ -2512,14 +2460,18 @@ def main():
             
             # Draw everything
             draw_endless_world(screen, world, agent, coin_manager.coins, word_cue)
-            draw_hud(screen, trial_num, total_trials, agent, params['target_coins'], difficulty, last_action_info)
+            # Use actual trial number and total including practice for HUD display
+            if trial_type == 'practice':
+                draw_hud(screen, trial_num, practice_trials, agent, params['target_coins'], difficulty, last_action_info, is_practice=True)
+            else:
+                draw_hud(screen, trial_num, total_trials, agent, params['target_coins'], difficulty, last_action_info, is_practice=False)
             
             # Check trial completion
             if agent.coins_collected >= params['target_coins']:
                 completion_start = time.perf_counter()
                 push_immediate(f"TRIAL_COMPLETE_{trial_num}")
                 errp_logger.log_trial_complete(agent.coins_collected)
-                show_trial_complete(screen, agent, params['target_coins'])
+                # Skip trial complete screen - go directly to next trial transition
                 trial_running = False
                 completion_end = time.perf_counter()
                 if DEBUG_MODE:
@@ -2536,37 +2488,7 @@ def main():
             if actual_fps > 0 and actual_fps < FPS * 0.9:  # More than 10% drop
                 print(f"WARNING: FPS dropped to {actual_fps:.1f}")
         
-        # Inter-trial interval (non-blocking)
-        iti_start = time.time()
-        # Pre-create ITI screen once to avoid repeated Surface creation
-        if not hasattr(main, 'iti_screen'):
-            main.iti_screen = pygame.Surface(screen.get_size())
-            main.iti_screen.fill(COL['bg'])
-        
-        # Show ITI message
-        font = get_font(48)
-        iti_text = font.render("Preparing next trial...", True, COL['txt'])
-        iti_rect = iti_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-        
-        while time.time() - iti_start < ITI:
-            # Clear event queue properly to prevent buildup
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                    pygame.quit()
-                    exit()
-            
-            # Show ITI screen
-            screen.blit(main.iti_screen, (0, 0))
-            screen.blit(iti_text, iti_rect)
-            
-            # Show countdown
-            remaining = ITI - (time.time() - iti_start)
-            countdown_text = font.render(f"{remaining:.1f}s", True, COL['countdown'])
-            countdown_rect = countdown_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 + 60))
-            screen.blit(countdown_text, countdown_rect)
-            
-            pygame.display.flip()
-            clock.tick(60)  # Maintain timing
+        # Skip inter-trial interval - go directly to next trial's transition screen  # Maintain timing
     
     # Experiment complete
     errp_logger.save()
